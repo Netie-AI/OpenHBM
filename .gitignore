@@ -1,0 +1,81 @@
+# Build artefacts
+build/
+sim_build/
+obj_dir/
+*.vcd
+*.fst
+*.gtkw
+*.log
+
+# Verilator
+verilator/
+
+# Yosys
+*.json.tmp
+*.blif
+
+# SymbiYosys
+*_check/
+*_proof/
+*_bmc/
+*_cover/
+
+# SiliconCompiler
+job*/
+build/
+*.def
+*.lef.gz
+*.gds.gz
+
+# cocotb
+__pycache__/
+*.pyc
+results.xml
+*.xml.tmp
+
+# Vivado / Alveo
+*.jou
+*.str
+.Xil/
+vivado_*.log
+
+# OpenROAD-flow-scripts
+flow/results/
+flow/reports/
+flow/objects/
+flow/logs/
+
+# Nix
+result
+result-*
+.direnv/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Vendored sources fetched by util/vendor.py
+hw/vendor/*/
+!hw/vendor/.gitkeep
+!hw/vendor/*.lock.hjson
+
+# Python
+.venv/
+*.egg-info/
+dist/
+
+# uv
+.python-version
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# JEDEC PDFs (NEVER commit these)
+*.pdf
+!docs/spec/*.pdf.placeholder

@@ -1,0 +1,46 @@
+Netie Open HBM
+Copyright 2026 The Netie Open HBM Authors
+
+This product includes software developed by the Netie Open HBM project
+(https://github.com/netie-open-hbm).
+
+================================================================================
+Third-party components and licenses
+================================================================================
+
+This repository vendors and depends on the following open-source projects.
+The full text of each license is reproduced under hw/vendor/<name>/LICENSE
+when the upstream project is checked into util/vendor.py.
+
+  - lowRISC OpenTitan primitives (Apache-2.0)
+      https://github.com/lowRISC/opentitan
+  - PULP common cells (Solderpad 0.51)
+      https://github.com/pulp-platform/common_cells
+  - PULP RedMulE (Solderpad 0.51)
+      https://github.com/pulp-platform/redmule
+  - OpenHW Group CVA6 (Apache-2.0 / Solderpad 0.51 mixed)
+      https://github.com/openhwgroup/cva6
+  - LiteDRAM (BSD-2-Clause) -- referenced for scheduler/bank-machine architecture
+      https://github.com/enjoy-digital/litedram
+  - DRAMsim3 (MIT)
+      https://github.com/umd-memsys/DRAMsim3
+  - ASAP7 PDK (BSD-3-Clause)
+      https://github.com/The-OpenROAD-Project/asap7
+  - SkyWater 130 PDK (Apache-2.0)
+      https://github.com/google/skywater-pdk
+  - IHP SG13G2 PDK (Apache-2.0)
+      https://github.com/IHP-GmbH/IHP-Open-PDK
+  - SiliconCompiler (Apache-2.0)
+      https://github.com/siliconcompiler/siliconcompiler
+  - OSS CAD Suite (mixed Apache-2.0 / ISC / BSD)
+      https://github.com/YosysHQ/oss-cad-suite-build
+
+The following project is referenced for tooling but NOT vendored into the
+RTL repo (per docs/legal/export_control.md):
+
+  - iEDA (MulanPSL-2.0)
+      https://github.com/OSCC-Project/iEDA
+
+JEDEC standards documents (JESD270-4 / JESD270-4A) are not redistributed.
+Clean-room timing summaries derived from the publicly-available registration
+PDF are checked in under docs/spec/hbm4_timing.adoc.

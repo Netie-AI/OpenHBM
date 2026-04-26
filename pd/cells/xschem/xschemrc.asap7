@@ -1,0 +1,14 @@
+## xschemrc for ASAP7 7nm predictive FinFET PDK
+## ASAP7 ships BSIM-CMG models compatible with ngspice; no xschem symbol
+## library is supplied by ASU, so we maintain a minimal symbol set under
+## pd/cells/xschem/asap7_symbols/ (TODO).
+
+set ASAP7_ROOT $::env(ASAP7_ROOT)
+set XSCHEM_DESIGN_LIB $env(PWD)/xschem
+append XSCHEM_LIBRARY_PATH ":$XSCHEM_DESIGN_LIB"
+append XSCHEM_LIBRARY_PATH ":$XSCHEM_DESIGN_LIB/asap7_symbols"
+
+set tcleval ""
+set hide_symbols 0
+set use_lab_wire 1
+set color_ps 1

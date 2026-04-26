@@ -1,0 +1,63 @@
+name: fpga
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "FPGA target board"
+        required: true
+        default: alveo_u55c
+        type: choice
+        options:
+          - alveo_u55c
+          - alveo_u280
+          - vck5000
+  schedule:
+    # Nightly at 02:00 UTC -- gated to maintainer-triggered runs in practice
+    # because the HACC quota is finite. The schedule is a placeholder; CI
+    # config in the runner config blocks scheduled runs unless ENABLE_FPGA_NIGHTLY=1.
+    - cron: '0 2 * * *'
+
+concurrency:
+  group: fpga-${{ inputs.target || 'alveo_u55c' }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vivado:
+    name: Vivado synth (${{ inputs.target || 'alveo_u55c' }})
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && vars.ENABLE_FPGA_NIGHTLY == '1')
+    runs-on: [self-hosted, hacc, vivado]
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Source Vivado
+        run: |
+          source /tools/Xilinx/Vivado/2024.2/settings64.sh
+          which vivado
+          vivado -version
+
+      - name: Run synthesis
+        env:
+          TARGET: ${{ inputs.target || 'alveo_u55c' }}
+        run: |
+          cd fpga/${TARGET}
+          if [ -f run.tcl ]; then
+            vivado -mode batch -source run.tcl -log build_${TARGET}.log -journal build_${TARGET}.jou
+          else
+            echo "No run.tcl for ${TARGET} yet -- skipping."
+          fi
+
+      - name: Upload bitstream and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fpga-${{ inputs.target || 'alveo_u55c' }}
+          path: |
+            fpga/${{ inputs.target || 'alveo_u55c' }}/*.bit
+            fpga/${{ inputs.target || 'alveo_u55c' }}/reports/
+            fpga/${{ inputs.target || 'alveo_u55c' }}/build_*.log
+          if-no-files-found: ignore
+          retention-days: 30

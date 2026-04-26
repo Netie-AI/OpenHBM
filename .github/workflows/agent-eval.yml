@@ -1,0 +1,79 @@
+name: agent-eval
+
+on:
+  pull_request:
+    paths:
+      - 'docs/agent-prompts/**'
+      - 'tools/agent_eval/**'
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Path to a prompt to evaluate"
+        required: true
+        default: docs/agent-prompts/addr_map.md
+
+jobs:
+  corpus-regression:
+    name: Corpus regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache OSS CAD Suite
+        id: cache-osscad
+        uses: actions/cache@v4
+        with:
+          path: /opt/oss-cad-suite
+          key: oss-cad-suite-2026-04-02-linux-x64
+
+      - name: Install OSS CAD Suite
+        if: steps.cache-osscad.outputs.cache-hit != 'true'
+        run: sudo bash .devcontainer/install_oss_cad_suite.sh
+
+      - name: Add OSS CAD Suite to PATH
+        run: echo "/opt/oss-cad-suite/bin" >> $GITHUB_PATH
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install uv && uv sync
+
+      - name: Run eval harness over the corpus
+        run: |
+          uv run python tools/agent_eval/harness/run.py \
+            --corpus tools/agent_eval/corpus/ \
+            --report build/agent_eval_report.json \
+            --gate 80
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-report
+          path: build/agent_eval_report.json
+          retention-days: 30
+
+      - name: Comment scores on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'build/agent_eval_report.json';
+            if (!fs.existsSync(path)) return;
+            const r = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const lines = ['### Agent eval -- corpus regression', ''];
+            lines.push('| module | score | gate |');
+            lines.push('| --- | ---: | :---: |');
+            for (const m of r.modules) {
+              lines.push(`| \`${m.name}\` | ${m.score}/100 | ${m.score >= 80 ? 'PASS' : 'FAIL'} |`);
+            }
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: lines.join('\n')
+            });

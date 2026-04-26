@@ -1,0 +1,19 @@
+// hw/vendor/lowrisc_prim.lock.hjson
+// OpenTitan primitives -- the canonical primitive library referenced by
+// CLAUDE.md s5. License: Apache-2.0.
+{
+  name:        "lowrisc_prim",
+  target_dir:  "hw/vendor/lowrisc_prim",
+  license:     "Apache-2.0",
+  upstream: {
+    url:         "https://github.com/lowRISC/opentitan.git",
+    // Pin to a Phase-0 known-good commit. Update via:
+    //   git ls-remote https://github.com/lowRISC/opentitan.git refs/heads/master | head -n1
+    rev:         "0000000000000000000000000000000000000000",
+    only_subdir: "hw/ip/prim",
+  },
+  exclude: [
+    "*/dv/cov/*",
+    "*/dv/data/*",
+  ],
+}

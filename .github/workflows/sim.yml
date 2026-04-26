@@ -1,0 +1,64 @@
+name: sim
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: sim-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cocotb:
+    name: cocotb (${{ matrix.simulator }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        simulator: [verilator, icarus]
+        ip: [addr_map, ecc, refresh_mgr]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache OSS CAD Suite
+        id: cache-osscad
+        uses: actions/cache@v4
+        with:
+          path: /opt/oss-cad-suite
+          key: oss-cad-suite-2026-04-02-linux-x64
+
+      - name: Install OSS CAD Suite
+        if: steps.cache-osscad.outputs.cache-hit != 'true'
+        run: sudo bash .devcontainer/install_oss_cad_suite.sh
+
+      - name: Add OSS CAD Suite to PATH
+        run: echo "/opt/oss-cad-suite/bin" >> $GITHUB_PATH
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install uv
+      - run: uv sync
+
+      - name: Run cocotb (${{ matrix.simulator }} -- ${{ matrix.ip }})
+        env:
+          SIM: ${{ matrix.simulator }}
+        run: |
+          if [ -d "hw/ip/${{ matrix.ip }}/dv" ]; then
+            uv run make -C "hw/ip/${{ matrix.ip }}/dv"
+          else
+            echo "No dv/ directory for ${{ matrix.ip }} yet -- skipping."
+          fi
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cocotb-${{ matrix.simulator }}-${{ matrix.ip }}
+          path: |
+            hw/ip/${{ matrix.ip }}/dv/results.xml
+            hw/ip/${{ matrix.ip }}/dv/coverage.xml
+            hw/ip/${{ matrix.ip }}/dv/sim_build/
+          if-no-files-found: ignore
+          retention-days: 14

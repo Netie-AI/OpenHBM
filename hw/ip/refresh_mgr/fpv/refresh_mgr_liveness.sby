@@ -1,0 +1,16 @@
+[options]
+mode prove
+depth 32
+multiclock off
+
+[engines]
+abc pdr
+
+[script]
+read_verilog -sv ../rtl/refresh_mgr_pkg.sv
+read_verilog -sv ../rtl/refresh_mgr.sv
+prep -top refresh_mgr
+
+[files]
+../rtl/refresh_mgr_pkg.sv
+../rtl/refresh_mgr.sv

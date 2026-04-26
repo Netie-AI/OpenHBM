@@ -1,0 +1,101 @@
+// Copyright 2026 The Netie Open HBM Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// addr_map.hjson -- register description, fed to util/reggen/regtool.py.
+{
+  name: "addr_map",
+  human_name: "Address mapper",
+  one_line_desc: "Programmable XOR address mapping for HBM4.",
+
+  bus_interfaces: [
+    { protocol: "apb", direction: "device" }
+  ],
+
+  reset_request_list: [],
+  alert_list:        [],
+
+  // Parameters surfaced into the top.
+  param_list: [
+    { name: "NumRegions", type: "int", default: "16", desc: "Region table size" }
+  ],
+
+  registers: [
+    { name: "DEFAULT_MODE",
+      desc: "Default mapping mode for misses on the region table.",
+      swaccess: "rw",
+      hwaccess: "hro",
+      fields: [
+        { bits: "1:0",
+          name: "MODE",
+          desc: "0=CH_STRIPED, 1=BANK_INTERLEAVED, 2=ROW_STATIONARY, 3=RESERVED",
+          resval: "0"
+        }
+      ]
+    },
+
+    { name: "COMMIT",
+      desc: "Write 1 to atomically promote SHADOW region table to LIVE.",
+      swaccess: "wo",
+      hwaccess: "hro",
+      hwext: "true",
+      hwqe: "true",
+      fields: [
+        { bits: "0", name: "COMMIT", desc: "1: copy shadow to live", resval: "0" }
+      ]
+    },
+
+    { name: "STATUS",
+      desc: "Read-only status.",
+      swaccess: "ro",
+      hwaccess: "hwo",
+      fields: [
+        { bits: "31:0", name: "REGION_HIT_CTR", desc: "Total region-table hits since reset" }
+      ]
+    },
+
+    { multireg: {
+        cname: "REGION",
+        name:  "REGION",
+        desc:  "Region descriptor (shadow). Promote with COMMIT.",
+        swaccess: "rw",
+        hwaccess: "hro",
+        count: "NumRegions",
+        compact: false,
+        fields: [
+          { bits: "0",     name: "VALID",     desc: "Region in use",                  resval: "0" },
+          { bits: "9:4",   name: "SIZE_LOG2", desc: "Region size = 2**SIZE_LOG2 bytes", resval: "0" },
+          { bits: "11:10", name: "MODE",      desc: "Mapping mode (mode_e)",          resval: "0" },
+          { bits: "31:16", name: "BASE_HI",   desc: "Upper 16 bits of base_sa",       resval: "0" }
+        ]
+      }
+    },
+
+    { multireg: {
+        cname: "REGION_BASE_LO",
+        name:  "REGION_BASE_LO",
+        desc:  "Lower 24 bits of base_sa (the upper 16 bits live in REGION).",
+        swaccess: "rw",
+        hwaccess: "hro",
+        count: "NumRegions",
+        compact: false,
+        fields: [
+          { bits: "23:0", name: "BASE_LO", desc: "Lower 24 bits of region base", resval: "0" }
+        ]
+      }
+    },
+
+    { multireg: {
+        cname: "REGION_XOR_POLY",
+        name:  "REGION_XOR_POLY",
+        desc:  "Per-region XOR polynomial taps over the upper system bits.",
+        swaccess: "rw",
+        hwaccess: "hro",
+        count: "NumRegions",
+        compact: false,
+        fields: [
+          { bits: "31:0", name: "POLY", desc: "Polynomial taps", resval: "0" }
+        ]
+      }
+    }
+  ]
+}

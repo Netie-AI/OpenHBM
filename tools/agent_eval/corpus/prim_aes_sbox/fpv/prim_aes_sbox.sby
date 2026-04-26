@@ -1,0 +1,14 @@
+﻿[options]
+mode bmc
+depth 8
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv ../rtl/prim_aes_sbox.sv
+prep -top prim_aes_sbox
+
+[files]
+../rtl/prim_aes_sbox.sv

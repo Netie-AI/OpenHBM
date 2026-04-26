@@ -1,0 +1,15 @@
+// hw/vendor/pulp_common_cells.lock.hjson
+// PULP common cells -- FIFOs, fall-through registers, sync primitives.
+// License: Solderpad 0.51.
+{
+  name:        "pulp_common_cells",
+  target_dir:  "hw/vendor/pulp_common_cells",
+  license:     "SHL-0.51",
+  upstream: {
+    url:         "https://github.com/pulp-platform/common_cells.git",
+    rev:         "0000000000000000000000000000000000000000",
+  },
+  exclude: [
+    "*/test/*",
+  ],
+}

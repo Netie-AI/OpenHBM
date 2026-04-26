@@ -1,0 +1,15 @@
+// hw/vendor/pulp_redmule.lock.hjson
+// RedMulE -- FP16/FP8 systolic MatMul engine. License: Solderpad 0.51.
+{
+  name:        "pulp_redmule",
+  target_dir:  "hw/vendor/pulp_redmule",
+  license:     "SHL-0.51",
+  upstream: {
+    url:         "https://github.com/pulp-platform/redmule.git",
+    rev:         "0000000000000000000000000000000000000000",
+  },
+  exclude: [
+    "*/test/*",
+    "*/sim/*",
+  ],
+}

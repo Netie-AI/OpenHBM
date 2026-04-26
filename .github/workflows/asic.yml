@@ -1,0 +1,110 @@
+name: asic
+
+on:
+  workflow_dispatch:
+    inputs:
+      flow:
+        description: "PD flow target"
+        required: true
+        default: asap7
+        type: choice
+        options:
+          - sky130
+          - ihp130
+          - asap7
+          - freepdk45
+          - ieda_sky130
+      top:
+        description: "Top IP block"
+        required: true
+        default: addr_map
+  schedule:
+    # Weekly Sunday 04:00 UTC -- the open PD runs are slow but cheap
+    - cron: '0 4 * * 0'
+
+concurrency:
+  group: asic-${{ inputs.flow || 'all' }}-${{ inputs.top || 'all' }}
+  cancel-in-progress: false
+
+jobs:
+  pd:
+    name: PD ${{ matrix.flow }} -- ${{ matrix.top }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        flow:
+          - sky130
+          - ihp130
+          - asap7
+          - ieda_sky130
+        top:
+          - addr_map
+          - ecc
+        exclude:
+          - flow: ieda_sky130
+            top: ecc          # iEDA second-source: focus on addr_map for now
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache OSS CAD Suite
+        id: cache-osscad
+        uses: actions/cache@v4
+        with:
+          path: /opt/oss-cad-suite
+          key: oss-cad-suite-2026-04-02-linux-x64
+
+      - name: Install OSS CAD Suite
+        if: steps.cache-osscad.outputs.cache-hit != 'true'
+        run: sudo bash .devcontainer/install_oss_cad_suite.sh
+
+      - name: Add OSS CAD Suite to PATH
+        run: echo "/opt/oss-cad-suite/bin" >> $GITHUB_PATH
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install uv
+      - run: uv sync
+
+      - name: Pull iEDA image (only for ieda_sky130)
+        if: matrix.flow == 'ieda_sky130'
+        run: docker pull iedaopensource/release:latest
+
+      - name: Run SiliconCompiler flow
+        run: uv run python pd/sc_flows/runner.py --flow ${{ matrix.flow }} --top ${{ matrix.top }}
+
+      - name: Upload PPA report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pd-${{ matrix.flow }}-${{ matrix.top }}
+          path: |
+            build/${{ matrix.top }}/*/*/reports/
+            build/${{ matrix.top }}/*/*/job0/sc_summary.json
+            build/${{ matrix.top }}/*/*/outputs/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  cross-flow-delta:
+    name: Cross-flow PPA delta
+    needs: pd
+    runs-on: ubuntu-24.04
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install uv && uv sync
+      - name: Compute delta and post to pd-reports branch
+        run: |
+          uv run python pd/sc_flows/cross_flow_delta.py \
+            --artifacts artifacts/ \
+            --output build/cross_flow_delta.md \
+            --threshold-pct 10
+          cat build/cross_flow_delta.md

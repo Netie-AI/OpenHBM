@@ -1,0 +1,14 @@
+﻿[options]
+mode bmc
+depth 8
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv ../rtl/popcount.sv
+prep -top popcount
+
+[files]
+../rtl/popcount.sv

@@ -1,0 +1,62 @@
+name: formal
+
+on:
+  pull_request:
+    paths:
+      - 'hw/ip/**/rtl/**'
+      - 'hw/ip/**/fpv/**'
+      - 'hw/formal/**'
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1' # Monday 06:00 UTC -- weekly deeper bound
+
+concurrency:
+  group: formal-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  symbiyosys:
+    name: SymbiYosys (${{ matrix.ip }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        ip: [addr_map, ecc, refresh_mgr]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache OSS CAD Suite
+        id: cache-osscad
+        uses: actions/cache@v4
+        with:
+          path: /opt/oss-cad-suite
+          key: oss-cad-suite-2026-04-02-linux-x64
+
+      - name: Install OSS CAD Suite
+        if: steps.cache-osscad.outputs.cache-hit != 'true'
+        run: sudo bash .devcontainer/install_oss_cad_suite.sh
+
+      - name: Add OSS CAD Suite to PATH
+        run: echo "/opt/oss-cad-suite/bin" >> $GITHUB_PATH
+
+      - name: Run SymbiYosys
+        run: |
+          shopt -s nullglob
+          had_any=0
+          for sby in hw/ip/${{ matrix.ip }}/fpv/*.sby; do
+            had_any=1
+            echo "[formal] $sby"
+            sby -f "$sby"
+          done
+          if [ "$had_any" = "0" ]; then
+            echo "No .sby files for ${{ matrix.ip }} yet -- skipping."
+          fi
+
+      - name: Upload formal traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: formal-${{ matrix.ip }}
+          path: hw/ip/${{ matrix.ip }}/fpv/*_check/
+          retention-days: 30

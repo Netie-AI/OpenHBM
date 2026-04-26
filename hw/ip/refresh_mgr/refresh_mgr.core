@@ -1,0 +1,17 @@
+CAPI=2:
+# Copyright 2026 The Netie Open HBM Authors
+# SPDX-License-Identifier: Apache-2.0
+name: "netie-open-hbm:ip:refresh_mgr:0.1.0"
+description: "DRFM + PRAC + per-bank credit deferral."
+
+filesets:
+  rtl:
+    files:
+      - rtl/refresh_mgr_pkg.sv
+      - rtl/refresh_mgr.sv
+    file_type: systemVerilogSource
+
+targets:
+  default:
+    filesets: [rtl]
+    toplevel: refresh_mgr

@@ -1,0 +1,14 @@
+﻿[options]
+mode bmc
+depth 8
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv ../rtl/cdc_pulse.sv
+prep -top cdc_pulse
+
+[files]
+../rtl/cdc_pulse.sv

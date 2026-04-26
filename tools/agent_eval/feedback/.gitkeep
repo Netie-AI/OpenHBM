@@ -1,0 +1,2 @@
+# Feedback artefacts are written here by tools/agent_eval/harness/feedback.py.
+# Per-IP feedback is intentionally gitignored; only this .gitkeep is tracked.

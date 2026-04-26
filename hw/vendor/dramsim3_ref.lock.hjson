@@ -1,0 +1,12 @@
+// hw/vendor/dramsim3_ref.lock.hjson
+// DRAMsim3 -- the source we patch into hw/vip/dramsim4/ for HBM4 timing.
+// License: MIT.
+{
+  name:        "dramsim3_ref",
+  target_dir:  "third_party/dramsim3_ref",
+  license:     "MIT",
+  upstream: {
+    url:         "https://github.com/umd-memsys/DRAMsim3.git",
+    rev:         "0000000000000000000000000000000000000000",
+  },
+}

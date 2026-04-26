@@ -1,0 +1,56 @@
+site_name: Netie Open HBM
+site_description: An open, JEDEC-compliant HBM4 controller and RISC-V-native LPU.
+repo_url: https://github.com/netie-open-hbm/netie-open-hbm
+edit_uri: edit/main/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+  features:
+    - navigation.indexes
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: README.md
+  - Plan: Plan.md
+  - Architecture:
+      - Overview: docs/arch/overview.md
+      - HBM4 timing: docs/spec/hbm4_timing.adoc
+  - IP blocks:
+      - addr_map: hw/ip/addr_map/doc/addr_map.md
+      - hbm4_ctrl: hw/ip/hbm4_ctrl/doc/hbm4_ctrl.md
+  - Agent prompts:
+      - Preamble: docs/agent-prompts/_preamble.md
+      - addr_map: docs/agent-prompts/addr_map.md
+      - hbm4_ctrl: docs/agent-prompts/hbm4_ctrl.md
+      - refresh_mgr: docs/agent-prompts/refresh_mgr.md
+      - ecc: docs/agent-prompts/ecc.md
+      - hbm4_phy_shim: docs/agent-prompts/hbm4_phy_shim.md
+      - accel_core: docs/agent-prompts/accel_core.md
+      - attention_engine: docs/agent-prompts/attention_engine.md
+      - mbist_wrapper: docs/agent-prompts/mbist_wrapper.md
+  - RFCs:
+      - "0001 addr_map policy": docs/rfcs/0001-addr-map-policy.md
+  - Legal:
+      - "Export control": docs/legal/export_control.md
+  - Grants:
+      - "NLnet 2026 Q4": docs/grants/nlnet_2026q4.md

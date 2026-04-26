@@ -1,0 +1,56 @@
+{
+  "name": "Netie Open HBM",
+  "image": "debian:trixie",
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11",
+      "installTools": false
+    },
+    "ghcr.io/devcontainers-contrib/features/uv:1": {}
+  },
+
+  "onCreateCommand": "bash .devcontainer/install_oss_cad_suite.sh",
+  "postCreateCommand": "uv sync && pre-commit install --install-hooks",
+
+  "remoteEnv": {
+    "OSS_CAD_SUITE_VERSION": "2026-04-02",
+    "OSS_CAD_SUITE_HOME": "/opt/oss-cad-suite",
+    "PATH": "/opt/oss-cad-suite/bin:${containerEnv:PATH}"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "mshr-h.veriloghdl",
+        "eirikpre.systemverilog",
+        "ms-vscode.makefile-tools",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml",
+        "github.vscode-github-actions",
+        "github.copilot-chat"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspaces/${localWorkspaceFolderBasename}/.venv/bin/python",
+        "verilog.linting.linter": "verible",
+        "[systemverilog]": {
+          "editor.tabSize": 2,
+          "editor.insertSpaces": true,
+          "editor.detectIndentation": false
+        }
+      }
+    }
+  },
+
+  "mounts": [
+    "source=${localEnv:HOME}/.cache/oss-cad-suite,target=/root/.cache/oss-cad-suite,type=bind,consistency=cached"
+  ],
+
+  "remoteUser": "root"
+}

@@ -1,0 +1,14 @@
+## xschemrc for SkyWater 130 (open PDK)
+## Source: https://github.com/StefanSchippers/xschem-skywater-pdk
+
+set PDK_ROOT $::env(PDK_ROOT)
+set XSCHEM_LIB_DESIGN $env(HOME)/xschem-skywater-pdk
+set XSCHEM_DESIGN_LIB $env(PWD)/xschem
+append XSCHEM_LIBRARY_PATH ":$XSCHEM_DESIGN_LIB"
+append XSCHEM_LIBRARY_PATH ":$XSCHEM_LIB_DESIGN"
+append XSCHEM_LIBRARY_PATH ":$PDK_ROOT/sky130A/libs.tech/xschem"
+
+set tcleval ""
+set hide_symbols 0
+set use_lab_wire 1
+set color_ps 1

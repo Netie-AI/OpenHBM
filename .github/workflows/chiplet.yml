@@ -1,0 +1,49 @@
+name: chiplet
+
+on:
+  workflow_dispatch:
+    inputs:
+      partition:
+        description: "Two-die partition: <dieA>+<dieB>"
+        required: true
+        default: addr_map+ecc
+
+jobs:
+  ipl3d:
+    name: iPL-3D placement (${{ inputs.partition }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull iEDA image
+        run: docker pull iedaopensource/release:latest
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install uv && uv sync
+
+      - name: Run iPL-3D
+        run: |
+          IFS='+' read -ra DIES <<< "${{ inputs.partition }}"
+          uv run python pd/chiplet/ipl3d/run.py \
+            --die-a "${DIES[0]}" \
+            --die-b "${DIES[1]}" \
+            --output build/chiplet/${{ inputs.partition }}
+
+      - name: Run openEMS SI screen on the resulting floorplan
+        run: |
+          uv run python pkg/openems/run_screen.py \
+            --floorplan build/chiplet/${{ inputs.partition }}/floorplan.def \
+            --datarate-gbps 8 \
+            --lanes 2048 \
+            --output build/chiplet/${{ inputs.partition }}/si_screen.json
+
+      - name: Upload artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chiplet-${{ inputs.partition }}
+          path: build/chiplet/${{ inputs.partition }}/
+          retention-days: 30

@@ -1,0 +1,14 @@
+﻿[options]
+mode bmc
+depth 8
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv ../rtl/dfi_skid_register.sv
+prep -top dfi_skid_register
+
+[files]
+../rtl/dfi_skid_register.sv

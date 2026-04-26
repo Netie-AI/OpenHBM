@@ -1,0 +1,14 @@
+﻿[options]
+mode bmc
+depth 8
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv ../rtl/prac_topk_table.sv
+prep -top prac_topk_table
+
+[files]
+../rtl/prac_topk_table.sv

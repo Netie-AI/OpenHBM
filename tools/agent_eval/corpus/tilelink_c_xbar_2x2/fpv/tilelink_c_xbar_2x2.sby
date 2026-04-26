@@ -1,0 +1,14 @@
+﻿[options]
+mode bmc
+depth 8
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv ../rtl/tilelink_c_xbar_2x2.sv
+prep -top tilelink_c_xbar_2x2
+
+[files]
+../rtl/tilelink_c_xbar_2x2.sv

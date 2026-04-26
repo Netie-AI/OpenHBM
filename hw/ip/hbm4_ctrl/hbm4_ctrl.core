@@ -1,0 +1,20 @@
+CAPI=2:
+# Copyright 2026 The Netie Open HBM Authors
+# SPDX-License-Identifier: Apache-2.0
+name: "netie-open-hbm:ip:hbm4_ctrl:0.1.0"
+description: "JESD270-4A HBM4 controller -- Phase-1 skeleton."
+
+filesets:
+  rtl:
+    files:
+      - rtl/hbm4_ctrl_pkg.sv
+      - rtl/hbm4_bank_machine.sv
+      - rtl/hbm4_ctrl.sv
+    file_type: systemVerilogSource
+    depend:
+      - "netie-open-hbm:ip:addr_map:0.1.0"
+
+targets:
+  default:
+    filesets: [rtl]
+    toplevel: hbm4_ctrl

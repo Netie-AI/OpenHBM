@@ -1,0 +1,15 @@
+// hw/vendor/openhw_cva6.lock.hjson
+// CVA6 -- Linux-capable RISC-V control core. License: Apache-2.0 / Solderpad 0.51.
+{
+  name:        "openhw_cva6",
+  target_dir:  "hw/vendor/openhw_cva6",
+  license:     "Apache-2.0",
+  upstream: {
+    url:         "https://github.com/openhwgroup/cva6.git",
+    rev:         "0000000000000000000000000000000000000000",
+  },
+  exclude: [
+    "*/verif/*",
+    "*/docs/*",
+  ],
+}

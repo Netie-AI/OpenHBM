@@ -1,0 +1,13 @@
+// hw/vendor/litedram_ref.lock.hjson
+// LiteDRAM -- structural reference for the controller scheduler / bank-machine.
+// License: BSD-2-Clause. We do NOT vendor for synthesis -- only for reference,
+// hence target_dir under third_party/. See docs/rfcs/0002-litedram-fork-strategy.md.
+{
+  name:        "litedram_ref",
+  target_dir:  "third_party/litedram_ref",
+  license:     "BSD-2-Clause",
+  upstream: {
+    url:         "https://github.com/enjoy-digital/litedram.git",
+    rev:         "0000000000000000000000000000000000000000",
+  },
+}

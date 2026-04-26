@@ -1,0 +1,14 @@
+[options]
+mode bmc
+depth 4
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv ../rtl/xor_addr_mapper_toy.sv
+prep -top xor_addr_mapper_toy
+
+[files]
+../rtl/xor_addr_mapper_toy.sv

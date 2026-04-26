@@ -1,0 +1,103 @@
+= HBM4 timing summary (clean-room derivation)
+:source-highlighter: rouge
+:toc: left
+:icons: font
+
+WARNING: This document is a *clean-room summary* of timing parameters
+relevant to the Netie Open HBM controller, derived from the public JEDEC
+JESD270-4A press release (December 2025) and from public Cadence /
+Synopsys whitepapers. The original JESD270-4A PDF is *not redistributable*
+under JEDEC's free-registration terms. We do not paste any tables, diagrams,
+or numeric value assertions from that PDF here. Numeric values below are
+either:
+
+* Public quotations from the December 2025 JEDEC press release.
+* Engineering bounds derived from HBM3/3E predecessors plus public
+  vendor whitepapers.
+* CSR-programmable defaults, marked `[CSR-DEFAULT]`.
+
+Anything *required to be exact* per the spec is left as `[SEE-SPEC]` and the
+RTL accepts the value via a CSR rather than burning it into a parameter.
+
+== Geometry (public)
+
+[options="header"]
+|===
+| Parameter            | Value         | Source
+| Channels             | 32            | JEDEC press release Dec 2025
+| Pseudo-channels / ch | 2             | JEDEC press release Dec 2025
+| Data bus width / ch  | 64 bit DDR    | JEDEC press release Dec 2025
+| Total interface      | 2048 bit      | JEDEC press release Dec 2025
+| Stack heights        | 4 / 8 / 12 / 16 | JEDEC press release Dec 2025
+| Peak data rate       | 8 Gb/s (10 Gb/s extension)  | JEDEC press release Dec 2025
+| Aggregate BW         | 2 TB/s        | JEDEC press release Dec 2025
+|===
+
+== Parameterised speed bins
+
+We define four CSR-programmable speed bins. The numeric values are
+derived bounds, NOT spec assertions.
+
+[options="header"]
+|===
+| Bin           | Data rate (Gb/s) | tCK (ps)  | tCCD_S floor
+| `SPEED_4800`  | 4.8              | ~417       | 8 tCK
+| `SPEED_6400`  | 6.4              | ~313       | 8 tCK
+| `SPEED_8000`  | 8.0              | ~250       | 8 tCK [CSR-DEFAULT]
+| `SPEED_9600`  | 9.6              | ~208       | 10 tCK (extension bin)
+|===
+
+== Timing parameters (placeholders; adjust per CSR)
+
+These are the parameters the controller programs. *All values are
+CSR-programmable* with reset values driven by `HBM4_SPEED`. The numbers
+in the "Default" column are engineering bounds; the production silicon
+adjusts them to spec via the CSR interface.
+
+[options="header"]
+|===
+| Symbol       | Meaning                                | Default (8 Gb/s) | Notes
+| tRCD         | Row to column delay                    | [SEE-SPEC]       | typ. 14-15 ns @ HBM3
+| tRP          | Row precharge                          | [SEE-SPEC]       | typ. 14 ns @ HBM3
+| tRAS         | Row active                             | [SEE-SPEC]       | typ. 28-32 ns @ HBM3
+| tRC          | tRAS + tRP                             | [SEE-SPEC]       |
+| tRFC_ab      | All-bank refresh interval              | [SEE-SPEC]       | scales with stack height
+| tRFC_pb      | Per-bank refresh interval              | [SEE-SPEC]       |
+| tRFC_sb      | Same-bank refresh interval             | [SEE-SPEC]       |
+| tREFI_ab     | Refresh window                         | [SEE-SPEC]       | typ. 1.95 us / 7.8 us
+| tREFW        | Refresh-window total                   | [SEE-SPEC]       |
+| tFAW         | Four-bank-active window                | [SEE-SPEC]       |
+| tRRD_S       | Row-to-row delay (different BG)        | [SEE-SPEC]       |
+| tRRD_L       | Row-to-row delay (same BG)             | [SEE-SPEC]       |
+| tCCD_S       | Column-to-column delay (different BG)  | 8 tCK            |
+| tCCD_L       | Column-to-column delay (same BG)       | [SEE-SPEC]       |
+| tWR          | Write recovery                         | [SEE-SPEC]       |
+| tWTR_S       | Write-to-read different BG             | [SEE-SPEC]       |
+| tWTR_L       | Write-to-read same BG                  | [SEE-SPEC]       |
+| CL           | CAS latency                            | [SEE-SPEC]       |
+| CWL          | CAS write latency                      | [SEE-SPEC]       |
+|===
+
+== DRFM
+
+DRAM Refresh Management is part of JESD270-4A as in HBM3. The controller
+treats DRFM as a per-bank command emitted by `hw/ip/refresh_mgr` based on
+PRAC counter overflow. Detailed CSR encoding is in the `refresh_mgr`
+register file.
+
+== Open questions
+
+* The exact `tRFC_pb` curve at 16-high stacks is what `Plan.md` s11 risk #5
+  bites against. Until silicon validates the spec values, the controller
+  treats this as worst-case.
+* `tREFW` extension under DRFM defer is implementation-defined; our
+  policy lives in `docs/arch/refresh_policy.md`.
+
+== References
+
+* JEDEC press release, "JEDEC and Industry Leaders Collaborate to Release
+  JESD270-4 HBM4 Standard", December 2025.
+* Cadence: "High-Bandwidth Memory Evolution from First-Generation HBM to
+  the Latest HBM4", 2025.
+* DREAM (ISCA 2025) -- DRFM cost on KV-cache-heavy workloads.
+* USENIX Security 2025 -- 16-high rowhammer attacker model.

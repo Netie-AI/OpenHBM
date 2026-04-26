@@ -1,0 +1,44 @@
+# Tiny Tapeout submission descriptor (TTSKY26b template).
+project:
+  title:        "Netie Open HBM -- LFSR + tiny MAC"
+  description:  "Phase-2 community rite-of-passage tile for the open HBM4 project."
+  language:     "SystemVerilog"
+  clock_hz:     50000000
+  documentation_url: "https://github.com/netie-open-hbm/netie-open-hbm/blob/main/hw/top/tt_sky_tile/README.md"
+
+  picture:      ""
+  source_files:
+    - "rtl/tt_sky_tile.sv"
+  top_module:   "tt_sky_tile"
+  tiles:        "1x1"
+
+  authors:
+    - name:   "The Netie Open HBM Authors"
+      url:    "https://github.com/netie-open-hbm"
+      github: "netie-open-hbm"
+
+  pinout:
+    ui[0]: "lfsr seed bit 0"
+    ui[1]: "lfsr seed bit 1"
+    ui[2]: "lfsr seed bit 2"
+    ui[3]: "lfsr seed bit 3"
+    ui[4]: "lfsr seed bit 4"
+    ui[5]: "lfsr seed bit 5"
+    ui[6]: "lfsr seed bit 6"
+    ui[7]: "lfsr seed bit 7"
+    uo[0]: "mac[0]"
+    uo[1]: "mac[1]"
+    uo[2]: "mac[2]"
+    uo[3]: "mac[3]"
+    uo[4]: "mac[4]"
+    uo[5]: "mac[5]"
+    uo[6]: "mac[6]"
+    uo[7]: "mac[7]"
+    uio[0]: "unused"
+    uio[1]: "unused"
+    uio[2]: "unused"
+    uio[3]: "unused"
+    uio[4]: "unused"
+    uio[5]: "unused"
+    uio[6]: "unused"
+    uio[7]: "unused"

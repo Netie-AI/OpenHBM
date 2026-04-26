@@ -1,0 +1,3 @@
+# Keep this directory tracked. Vendored sources are populated by util/vendor.py
+# and are themselves gitignored (see .gitignore -- only the lockfiles and this
+# .gitkeep are tracked).

@@ -1,0 +1,14 @@
+﻿[options]
+mode bmc
+depth 8
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv ../rtl/prim_clock_buf.sv
+prep -top prim_clock_buf
+
+[files]
+../rtl/prim_clock_buf.sv

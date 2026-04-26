@@ -1,0 +1,14 @@
+[options]
+mode bmc
+depth 32
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv ../rtl/arbiter_rr.sv
+prep -top arbiter_rr
+
+[files]
+../rtl/arbiter_rr.sv

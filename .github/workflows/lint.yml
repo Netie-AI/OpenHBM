@@ -1,0 +1,73 @@
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verible:
+    name: verible-verilog-lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install verible
+        run: |
+          VERIBLE_VERSION=v0.0-3979-g4029a18d
+          curl -L "https://github.com/chipsalliance/verible/releases/download/${VERIBLE_VERSION}/verible-${VERIBLE_VERSION}-linux-static-x86_64.tar.gz" \
+            -o /tmp/verible.tar.gz
+          mkdir -p /tmp/verible
+          tar -xzf /tmp/verible.tar.gz -C /tmp/verible --strip-components=1
+          echo "/tmp/verible/bin" >> $GITHUB_PATH
+
+      - name: Run verible-verilog-lint
+        run: |
+          shopt -s globstar nullglob
+          files=( hw/ip/**/*.sv hw/subsystems/**/*.sv hw/top/**/*.sv hw/formal/**/*.sv )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No SystemVerilog files yet -- treating as success."
+            exit 0
+          fi
+          verible-verilog-lint --rules_config_search "${files[@]}"
+
+  python-lint:
+    name: ruff + mypy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install uv
+      - run: uv sync --extra dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy --no-incremental tools util pd || true  # advisory until typed
+
+  hjson-validate:
+    name: hjson + reggen
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install hjson jsonschema
+      - run: |
+          shopt -s globstar nullglob
+          files=( hw/ip/**/data/*.hjson )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No Hjson files yet -- treating as success."
+            exit 0
+          fi
+          for f in "${files[@]}"; do
+            python -c "import hjson, sys; hjson.load(open(sys.argv[1]))" "$f"
+            echo "OK: $f"
+          done

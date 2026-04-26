@@ -1,0 +1,12 @@
+// hw/vendor/opentitan_regtool.lock.hjson
+// reggen -- generates reg_top.sv + reg_pkg.sv from Hjson. License: Apache-2.0.
+{
+  name:        "opentitan_regtool",
+  target_dir:  "hw/vendor/opentitan_regtool",
+  license:     "Apache-2.0",
+  upstream: {
+    url:         "https://github.com/lowRISC/opentitan.git",
+    rev:         "0000000000000000000000000000000000000000",
+    only_subdir: "util/reggen",
+  },
+}

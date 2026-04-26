@@ -1,0 +1,32 @@
+CAPI=2:
+# Copyright 2026 The Netie Open HBM Authors
+# SPDX-License-Identifier: Apache-2.0
+name: "netie-open-hbm:ip:addr_map:0.1.0"
+description: "Programmable XOR address mapping for HBM4 (channel/bank/row/col)."
+
+filesets:
+  rtl:
+    files:
+      - rtl/addr_map_pkg.sv
+      - rtl/addr_map_xor.sv
+      - rtl/addr_map_region_table.sv
+      - rtl/addr_map_reg_top.sv
+      - rtl/addr_map.sv
+    file_type: systemVerilogSource
+
+  fpv:
+    files:
+      - fpv/addr_map_inj.sby
+      - fpv/addr_map_bound.sby
+    file_type: tclSource
+
+targets:
+  default: &default
+    filesets:
+      - rtl
+    toplevel: addr_map
+
+  fpv:
+    <<: *default
+    filesets_append:
+      - fpv

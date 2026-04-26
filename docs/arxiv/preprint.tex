@@ -1,0 +1,96 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage[hidelinks]{hyperref}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+\addbibresource{preprint.bib}
+
+\title{Towards an Open, JEDEC-Compliant HBM4 Controller and RISC-V-Native LPU}
+\author{The Netie Open HBM Authors}
+\date{2026 (preprint)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We describe the architecture, verification methodology, and licensing
+strategy of \emph{Netie Open HBM}: an open-source, JEDEC JESD270-4A-compliant
+HBM4 memory subsystem (controller, PHY-shim, ECC, RAS, security wrapper)
+tightly coupled to a RISC-V-native LPU accelerator. The project's thesis
+is that trademark-enforced JEDEC compatibility, validated through a
+demonstrably-running reference implementation under Apache-2.0, is
+achievable on a 24--36-month horizon from outside the NVIDIA-/SK Hynix-
+dominated stack, even though silicon supremacy is not. We describe the
+controller's programmable XOR-hash address mapping policy (the
+\texttt{addr\_map} block), the DRAM Refresh Management implementation
+(\texttt{refresh\_mgr}), our SEC-DED + chipkill ECC stack
+(\texttt{ecc}), the AI-agent training pipeline that generates the
+majority of the verified RTL, and the open EDA + transistor-level
+flows that close the toolchain gap when no PDK is available.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+% TODO
+
+\section{Background}
+\label{sec:bg}
+
+% TODO -- HBM evolution, RISC-V playbook, openness vs sign-off
+
+\section{Address mapping policy}
+\label{sec:addr_map}
+
+% TODO -- the three-mode XOR scheme, formal bijection proof
+
+\section{Refresh and rowhammer}
+\label{sec:refresh}
+
+% TODO -- DRFM + PRAC + credit-based deferral; DREAM ISCA 2025 numbers
+
+\section{ECC stack}
+\label{sec:ecc}
+
+% TODO -- SEC-DED Hsiao + RS chipkill; interaction with on-die ECC
+
+\section{LPU architecture}
+\label{sec:lpu}
+
+% TODO -- 16 tiles, RedMulE + SFPU + 5 babies + scratchpad + NoC
+
+\section{Verification methodology}
+\label{sec:verif}
+
+% TODO -- cocotb + Verilator + SymbiYosys + mcy mutation; agent-eval gate
+
+\section{Open EDA + transistor-level fallback}
+\label{sec:eda}
+
+% TODO -- ASAP7 FinFET, sky130/ihp130 dual flows, iEDA second-source,
+% iPL-3D chiplet, openEMS SI screening
+
+\section{Compatibility certification}
+\label{sec:cert}
+
+% TODO -- the RISC-V-style trademark moat; Netie Open HBM Compatible(TM)
+
+\section{Discussion and future work}
+\label{sec:discussion}
+
+% TODO -- Phase 4 base-die path, CXMT/YMTC ally-of-convenience
+
+\section*{Acknowledgements}
+
+% NLnet, MDEC, AMD HACC, OpenROAD, OSCC iEDA, lowRISC OpenTitan, PULP,
+% OpenHW Group, etc.
+
+\printbibliography
+
+\end{document}
