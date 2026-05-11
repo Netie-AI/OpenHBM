@@ -11,11 +11,12 @@ package refresh_mgr_pkg;
   parameter int unsigned RowW        = 17;
   parameter int unsigned NumBanks    = 16;
   parameter int unsigned CreditMax   = 4;
+  parameter int unsigned CountW       = 16;
 
   typedef struct packed {
-    logic              valid;
-    logic [RowW-1:0]   row;
-    logic [11:0]       count;
-  } prac_entry_t;
+    logic                        valid;
+    logic [RowW-1:0]             row;
+    logic [CountW-1:0]           count;
+  } prac_slot_t;
 
 endpackage : refresh_mgr_pkg

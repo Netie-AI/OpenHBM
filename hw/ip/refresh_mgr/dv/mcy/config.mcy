@@ -1,0 +1,28 @@
+[options]
+size 120
+seed 42
+tags COVERED NOCHANGE
+
+[script]
+read_verilog -sv ../../../rtl/refresh_mgr_pkg.sv
+read_verilog -sv ../../../rtl/refresh_mgr.sv
+prep -top refresh_mgr
+
+[files]
+../../../rtl/refresh_mgr_pkg.sv
+../../../rtl/refresh_mgr.sv
+
+[logic]
+if result("sim") == "FAIL":
+ tag("COVERED")
+else:
+ tag("NOCHANGE")
+
+[report]
+if tags("COVERED") + tags("NOCHANGE"):
+ print("mutation kill-rate proxy: {:.1f}%".format(
+    100.0 * tags("COVERED") / (tags("COVERED") + tags("NOCHANGE"))))
+
+[test sim]
+expect PASS FAIL
+run bash run_test.sh

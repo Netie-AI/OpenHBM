@@ -1,0 +1,10 @@
+# Hand-authored 16-row-offset hammer trace (pseudo bg/ba rows).
+# Format: decimal_bg decimal_ba row_hex
+2 3 0x1A70
+2 3 0x1A80
+2 3 0x1A70
+2 3 0x1A80
+2 3 0x1A70
+2 3 0x1A80
+2 3 0x1A70
+2 3 0x1A80

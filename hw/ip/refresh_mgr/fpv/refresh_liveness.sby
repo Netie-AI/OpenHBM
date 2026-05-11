@@ -1,16 +1,23 @@
 [options]
 mode prove
-depth 32
+depth 132
 multiclock off
 
 [engines]
 abc pdr
 
+
 [script]
 read_verilog -sv ../rtl/refresh_mgr_pkg.sv
 read_verilog -sv ../rtl/refresh_mgr.sv
-prep -top refresh_mgr
+read_verilog -sv abs_bank_machine.sv
+read_verilog -sv refresh_liveness.sv
+
+
+prep -top refresh_mgr_liveness_wrapper
 
 [files]
 ../rtl/refresh_mgr_pkg.sv
 ../rtl/refresh_mgr.sv
+abs_bank_machine.sv
+refresh_liveness.sv
