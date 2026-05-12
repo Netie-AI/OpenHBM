@@ -1,0 +1,16 @@
+[options]
+mode bmc
+depth 1
+multiclock off
+
+[engines]
+smtbmc yices
+
+[script]
+exec pwd > probe_pwd.txt; exec ls > probe_ls.txt
+read_verilog -sv ecc_pkg.sv
+prep -top ecc_secded
+
+[files]
+../../ecc/rtl/ecc_pkg.sv
+../../ecc/rtl/ecc_secded.sv

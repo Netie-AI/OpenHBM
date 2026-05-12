@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/YosysHQ/yosys/main/misc/jny.schema.json",
+  "generator": "Yosys 0.63+188 (git sha1 cede13a74, clang++ 18.1.8 -fPIC -O3)",
+  "version": "0.0.1",
+  "invocation": "write_jny -no-connections ../model/design.json ",
+  "features": ["attributes", "properties"],
+  "modules": [
+      {
+        "name": "abs_bank_machine",
+        "cell_sorts": [
+
+        ],
+        "attributes": {
+            "blackbox": "00000000000000000000000000000001",
+            "cells_not_processed": "00000000000000000000000000000001",
+            "src": "refresh_liveness_flat.v:76.1-78.10"
+        }
+      },
+      {
+        "name": "refresh_mgr_liveness_wrapper",
+        "cell_sorts": [
+
+        ],
+        "attributes": {
+            "top": "00000000000000000000000000000001",
+            "src": "refresh_liveness_flat.v:2.1-75.10"
+        }
+      }
+  ]
+}

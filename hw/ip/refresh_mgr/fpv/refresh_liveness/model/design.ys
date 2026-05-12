@@ -1,0 +1,10 @@
+# running in hw/ip/refresh_mgr/fpv/refresh_liveness/src/
+exec -- sh -c "sv2v -DOPENHBM_FPV wrapper.sv abs.sv refresh_mgr_pkg.sv refresh_mgr.sv > refresh_liveness_flat.v"
+verilog_defines -D OPENHBM_FPV
+read_verilog refresh_liveness_flat.v
+prep -top refresh_mgr_liveness_wrapper
+
+hierarchy -smtcheck
+rename -witness
+write_jny -no-connections ../model/design.json
+write_rtlil ../model/design.il

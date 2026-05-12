@@ -1,0 +1,9 @@
+# running in tmp_probe/src/
+exec pwd > probe_pwd.txt; exec ls > probe_ls.txt
+read_verilog -sv ecc_pkg.sv
+prep -top ecc_secded
+
+hierarchy -smtcheck
+rename -witness
+write_jny -no-connections ../model/design.json
+write_rtlil ../model/design.il

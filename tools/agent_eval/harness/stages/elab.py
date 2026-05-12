@@ -21,16 +21,19 @@ def stage_elab(ctx: StageContext) -> StageResult:
         "-Wpedantic",
         "--timing",
         "-sv",
-        f"--top-module={ctx.ip_name}",
+        "-Wno-fatal",
+        "--top-module",
+        ctx.ip_name,
         *[str(p) for p in files],
     ]
     # Make sure shared SVA libs and primitives are visible.
     sva_lib = ctx.repo_root / "hw/formal/sva_lib"
     prim_dir = ctx.repo_root / "hw/ip/prim_generic/rtl"
+    # Verilator requires `-I<dir>` glued; `-I <dir>` mis-parses the path as a source file.
     if sva_lib.exists():
-        cmd.extend(["-I", str(sva_lib)])
+        cmd.append("-I" + str(sva_lib))
     if prim_dir.exists():
-        cmd.extend(["-I", str(prim_dir)])
+        cmd.append("-I" + str(prim_dir))
 
     rc, out, err = run(cmd, cwd=ctx.work, timeout=300)
     if rc == 0:

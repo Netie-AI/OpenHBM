@@ -1,0 +1,9 @@
+FAIL refresh_mgr: 0.0/100  feedback -> 
+/mnt/c/Users/oojia/OpenHBM/tools/agent_eval/feedback/refresh_mgr/20260512T010207
+Z.md
+                 Agent eval                 
+┏━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━┓
+┃ IP          ┃ Score ┃ Threshold ┃ Status ┃
+┡━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━┩
+│ refresh_mgr │   0.0 │        80 │  FAIL  │
+└─────────────┴───────┴───────────┴────────┘

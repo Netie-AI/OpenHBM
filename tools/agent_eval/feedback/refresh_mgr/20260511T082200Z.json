@@ -1,0 +1,46 @@
+{
+  "name": "refresh_mgr",
+  "score": 0.0,
+  "threshold": 80.0,
+  "passed": false,
+  "stages": [
+    {
+      "stage": "lint",
+      "score_unit": 0.0,
+      "detail": "verible-verilog-lint not on PATH; install OSS CAD Suite",
+      "hard_fail": false
+    },
+    {
+      "stage": "elab",
+      "score_unit": 0.7,
+      "detail": "errors=1 warnings=0\n%Error: Invalid option: --top-module=refresh_mgr\n        ... See the manual at https://verilator.org/verilator_doc.html?v=5.047 for more assistance.",
+      "hard_fail": false
+    },
+    {
+      "stage": "sim_pass",
+      "score_unit": 0.0,
+      "detail": "no tests reported",
+      "hard_fail": false
+    },
+    {
+      "stage": "func_cov",
+      "score_unit": 1.0,
+      "detail": "4/4 bins hit (100.0%)",
+      "hard_fail": false
+    },
+    {
+      "stage": "formal",
+      "score_unit": 0.0,
+      "detail": "0/1 sby tasks passed\nFAIL: refresh_liveness.sby (rc=1)",
+      "hard_fail": true
+    }
+  ],
+  "weights": {
+    "lint": 10,
+    "elab": 10,
+    "sim_pass": 20,
+    "func_cov": 20,
+    "formal": 25,
+    "mutation": 15
+  }
+}

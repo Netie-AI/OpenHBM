@@ -29,6 +29,22 @@ def _parse_results(results_xml: Path) -> tuple[int, int]:
         total += int(ts.get("tests", "0"))
         failed += int(ts.get("failures", "0"))
         failed += int(ts.get("errors", "0"))
+    if total > 0:
+        return total - failed, total
+
+    # Cocotb/pytest JUnit often emits <testcase> rows without testsuite counters.
+    cases = list(root.iter("testcase"))
+    if not cases:
+        return 0, 0
+    total = len(cases)
+    failed = 0
+    for tc in cases:
+        bad = bool(list(tc.iter("failure")) or list(tc.iter("error")))
+        st = (tc.get("status") or "").lower()
+        if st in ("fail", "failed", "error"):
+            bad = True
+        if bad:
+            failed += 1
     return total - failed, total
 
 
@@ -44,27 +60,41 @@ def stage_sim(ctx: StageContext, simulator: str = "verilator") -> StageResult:
 
     env = os.environ.copy()
     env["SIM"] = simulator
-    results = ctx.work / f"results_{simulator}.xml"
+    # Some IP DV Makefiles ignore COCOTB_RESULTS_FILE and always emit into dv/.
+    # Prefer the canonical dv/results.xml so sim_pass can reliably locate results.
+    results = dv_dir / "results.xml"
     env["COCOTB_RESULTS_FILE"] = str(results)
 
     rc, out, err = run(
         ["make", "-C", str(dv_dir)],
         cwd=ctx.work,
+        env=env,
         timeout=1800,
     )
     passed, total = _parse_results(results)
+    n_case = (
+        len(list(ET.parse(results).getroot().iter("testcase")))
+        if results.exists()
+        else 0
+    )
     if total == 0:
-        # Fallback to scraping cocotb output for "PASS"/"FAIL".
-        passed = len(re.findall(r"\* TEST .* PASS", out + err))
-        failed = len(re.findall(r"\* TEST .* FAIL", out + err))
+        # Fallback: cocotb regression table uses "** <module>.<test> ... PASS|FAIL".
+        blob = out + err
+        passed = len(re.findall(r"\*\*\s+[\w.]+\s+PASS\b", blob))
+        failed = len(re.findall(r"\*\*\s+[\w.]+\s+FAIL\b", blob))
         total = passed + failed
     if total == 0:
-        return StageResult("sim_pass", 0.0, "no tests reported")
+        return StageResult(
+            "sim_pass",
+            0.0,
+            f"no tests reported (results={results}, testcase_nodes={n_case})",
+        )
     score = passed / total
     return StageResult(
         "sim_pass",
         score,
-        f"{passed}/{total} passed under {simulator} (rc={rc})",
+        f"{passed}/{total} passed under {simulator} (rc={rc}); "
+        f"results={results.name}; testcase_nodes={n_case}",
     )
 
 

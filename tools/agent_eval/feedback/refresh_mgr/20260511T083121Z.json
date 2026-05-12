@@ -1,0 +1,46 @@
+{
+  "name": "refresh_mgr",
+  "score": 54.12,
+  "threshold": 80.0,
+  "passed": false,
+  "stages": [
+    {
+      "stage": "lint",
+      "score_unit": 0.0,
+      "detail": "verible-verilog-lint not on PATH; install OSS CAD Suite",
+      "hard_fail": false
+    },
+    {
+      "stage": "elab",
+      "score_unit": 0.1,
+      "detail": "errors=3 warnings=0\n%Error: Cannot find file containing module: '/mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib'\n        ... See the manual at https://verilator.org/verilator_doc.html?v=5.047 for more assistance.\n        ... Looked in:\n             /mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib\n             /mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib.v\n             /mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib.sv\n             /mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib\n             /mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib.v\n             /mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib.sv\n             obj_dir//mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib\n             obj_dir//mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib.v\n             obj_dir//mnt/c/Users/oojia/OpenHBM/hw/formal/sva_lib.sv\n        ... With current working directory '/tmp/eval-refresh_mgr-zmfcuv7l'\n%Error: Cannot find file containing module: '/mnt/c/Users/oojia/OpenHBM/hw/ip/prim_generic/rtl'\n%Error: Exiting due to 2 error(s)",
+      "hard_fail": false
+    },
+    {
+      "stage": "sim_pass",
+      "score_unit": 0.0,
+      "detail": "no tests reported",
+      "hard_fail": false
+    },
+    {
+      "stage": "func_cov",
+      "score_unit": 1.0,
+      "detail": "4/4 bins hit (100.0%)",
+      "hard_fail": false
+    },
+    {
+      "stage": "formal",
+      "score_unit": 1.0,
+      "detail": "1/1 sby tasks passed",
+      "hard_fail": false
+    }
+  ],
+  "weights": {
+    "lint": 10,
+    "elab": 10,
+    "sim_pass": 20,
+    "func_cov": 20,
+    "formal": 25,
+    "mutation": 15
+  }
+}

@@ -92,6 +92,9 @@ async def _step(
     dut.credit_release_i.value = rel
     dut.drfm_ack_i.value = ack
     await RisingEdge(dut.clk_i)
+    # Verilator schedules NBAs after the active region; a tiny delay avoids
+    # sampling registered outputs before they commit vs the Python model.
+    await Timer(1, unit="ps")
     g_bg, g_ba, g_row, g_pend, g_ov = m.step(
         trefw_tick=bool(tick),
         act_valid=bool(act),
@@ -101,7 +104,9 @@ async def _step(
         credit_release=bool(rel),
         drfm_ack=bool(ack),
     )
-    assert int(dut.drfm_pending_o.value) == int(g_pend), f"pending rtl={int(dut.drfm_pending_o)} m={g_pend}"
+    assert int(dut.drfm_pending_o.value) == int(g_pend), (
+        f"pending rtl={int(dut.drfm_pending_o.value)} m={int(g_pend)}"
+    )
     assert int(dut.prac_overflow_alert_o.value) == int(g_ov)
     assert int(dut.drfm_target_bg_o.value) == g_bg
     assert int(dut.drfm_target_ba_o.value) == g_ba
@@ -127,7 +132,9 @@ async def test_corner_prac_pending_and_ack(dut) -> None:
     await _reset(dut)
     # Focus PRAC accumulation on bank 3 / fixed row vs Prac_thresh from Makefile.
     th = _thresh()
-    for _ in range(max(th + 8, int(th * 2))):
+    # Enough Misra-Gries activations that count >= PracThresh even if Makefile/RTL
+    # threshold drifts slightly vs the Python default.
+    for _ in range(max(th * 2 + 32, th + 48)):
         await _step(dut, m, act=1, bg=0, ba=3, row=0x2A71)
     _touch("prac", "pending_rise")
     assert int(dut.drfm_pending_o.value) == 1
@@ -148,12 +155,22 @@ async def test_corner_credit_exhaust_alert(dut) -> None:
         await _step(dut, m, act=1, bg=bg, ba=ba, row=777)
     # Drain credits with repeated ack+pulse without tick refill.
     saw_ov = False
-    for cy in range(64):
+    # Keep hammering the same row while draining credits; ack alone removes the
+    # PRAC slot so pending never re-arms and credits never exhaust without acts.
+    for cy in range(150):
         p = int(dut.drfm_pending_o.value)
         if int(dut.prac_overflow_alert_o.value):
             saw_ov = True
             break
-        await _step(dut, m, ack=1 if p else 0)
+        await _step(
+            dut,
+            m,
+            act=1,
+            bg=bg,
+            ba=ba,
+            row=777,
+            ack=1 if p else 0,
+        )
     assert saw_ov, "expected prac_overflow when credits drained"
     _touch("defer", "credit_exhaust")
     _touch("defer", "overflow_seen")

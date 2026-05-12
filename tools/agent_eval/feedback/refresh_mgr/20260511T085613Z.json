@@ -1,0 +1,46 @@
+{
+  "name": "refresh_mgr",
+  "score": 67.53,
+  "threshold": 80.0,
+  "passed": false,
+  "stages": [
+    {
+      "stage": "lint",
+      "score_unit": 0.24,
+      "detail": "Unable to fully parse configuration: invalid flag \"package-filename-suffix\"\nUnable to fully parse configuration: invalid flag \"package-filename-suffix\"\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:76:101: Line length exceeds max: 100; is: 101 [Style: line-length] [line-length]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:209:7-16: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:213:11-12: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:215:9-10: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:218:7-14: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:219:7-13: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:220:7-13: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:221:7-13: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:225:9-13: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:230:9-16: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:237:11-12: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:241:11-15: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:243:11-15: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:245:11-15: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:255:9-13: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:262:9-16: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:263:9-15: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]\n/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:264:9-15: Use blocking assignments, at most, for locals inside 'always_ff' sequential blocks. [Style: sequential-logic] [always-ff-non-blocking]",
+      "hard_fail": false
+    },
+    {
+      "stage": "elab",
+      "score_unit": 1.0,
+      "detail": "clean",
+      "hard_fail": false
+    },
+    {
+      "stage": "sim_pass",
+      "score_unit": 0.0,
+      "detail": "no tests reported",
+      "hard_fail": false
+    },
+    {
+      "stage": "func_cov",
+      "score_unit": 1.0,
+      "detail": "4/4 bins hit (100.0%)",
+      "hard_fail": false
+    },
+    {
+      "stage": "formal",
+      "score_unit": 1.0,
+      "detail": "1/1 sby tasks passed",
+      "hard_fail": false
+    }
+  ],
+  "weights": {
+    "lint": 10,
+    "elab": 10,
+    "sim_pass": 20,
+    "func_cov": 20,
+    "formal": 25,
+    "mutation": 15
+  }
+}

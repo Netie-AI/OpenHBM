@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+<testsuite timestamp="2026-05-11T16:08:44" hostname="MSI" package="tmp_probe" id="0" name="default" tests="1" errors="1" failures="0" time="0" skipped="0">
+<properties>
+<property name="os" value="Linux"/>
+<property name="expect" value="PASS"/>
+<property name="status" value="ERROR"/>
+</properties>
+<testcase classname="default" name="default" time="0">
+<error type="ERROR"/>
+</testcase>
+<system-out>SBY 16:08:44 [tmp_probe] Removing directory '/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/fpv/tmp_probe'.
+SBY 16:08:44 [tmp_probe] Copy '/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/fpv/../../ecc/rtl/ecc_pkg.sv' to '/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/fpv/tmp_probe/src/ecc_pkg.sv'.
+SBY 16:08:44 [tmp_probe] Copy '/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/fpv/../../ecc/rtl/ecc_secded.sv' to '/mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/fpv/tmp_probe/src/ecc_secded.sv'.
+SBY 16:08:44 [tmp_probe] engine_0: smtbmc yices
+SBY 16:08:44 [tmp_probe] base: starting process &quot;cd tmp_probe/src; yosys -ql ../model/design.log ../model/design.ys&quot;
+SBY 16:08:44 [tmp_probe] base: ERROR: Unknown option &quot;pwd&quot; or &quot;--&quot; doesn't precede command.
+SBY 16:08:44 [tmp_probe] base: finished (returncode=1)
+SBY 16:08:44 [tmp_probe] base: task failed. ERROR.
+SBY 16:08:44 [tmp_probe] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 16:08:44 [tmp_probe] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 16:08:44 [tmp_probe] summary: engine_0 (smtbmc yices) did not return a status
+SBY 16:08:44 [tmp_probe] summary: engine_0 did not produce any traces
+SBY 16:08:44 [tmp_probe] DONE (ERROR, rc=16)
+</system-out>
+<system-err>
+</system-err>
+</testsuite>
+</testsuites>

@@ -1,0 +1,46 @@
+{
+  "name": "refresh_mgr",
+  "score": 52.94,
+  "threshold": 80.0,
+  "passed": false,
+  "stages": [
+    {
+      "stage": "lint",
+      "score_unit": 0.0,
+      "detail": "verible-verilog-lint not on PATH; install OSS CAD Suite",
+      "hard_fail": false
+    },
+    {
+      "stage": "elab",
+      "score_unit": 0.0,
+      "detail": "errors=7 warnings=0\n%Error: /mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:50:3: Reference to 'prac_slot_t' before declaration (IEEE 1800-2023 6.18)\n                                                                            : ... Suggest move the declaration before the reference, or use a forward typedef\n   50 |   prac_slot_t mem_q[NumBanks][PracTopK];\n      |   ^~~~~~~~~~~\n        /mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr_pkg.sv:20:5: ... Location of original declaration\n   20 |   } prac_slot_t;\n      |     ^~~~~~~~~~~\n        ... See the manual at https://verilator.org/verilator_doc.html?v=5.047 for more assistance.\n%Error: /mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:63:13: Reference to 'prac_slot_t' before declaration (IEEE 1800-2023 6.18)\n                                                                             : ... Suggest move the declaration before the reference, or use a forward typedef\n   63 |       input prac_slot_t mem[NumBanks][PracTopK],\n      |             ^~~~~~~~~~~\n        /mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr_pkg.sv:20:5: ... Location of original declaration\n   20 |   } prac_slot_t;\n      |     ^~~~~~~~~~~\n%Error: /mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr.sv:87:42: Reference to 'prac_slot_t' before declaration (IEEE 1800-2023 6.18)\n                                                                             : ... Suggest move the declaration before the reference, or use a forward typedef\n   87 |   task automatic tbl_decay_inplace(inout prac_slot_t slots[PracTopK]);\n      |                                          ^~~~~~~~~~~\n        /mnt/c/Users/oojia/OpenHBM/hw/ip/refresh_mgr/rtl/refresh_mgr_pkg.sv:20:5: ... Location of original declaration",
+      "hard_fail": false
+    },
+    {
+      "stage": "sim_pass",
+      "score_unit": 0.0,
+      "detail": "no tests reported",
+      "hard_fail": false
+    },
+    {
+      "stage": "func_cov",
+      "score_unit": 1.0,
+      "detail": "4/4 bins hit (100.0%)",
+      "hard_fail": false
+    },
+    {
+      "stage": "formal",
+      "score_unit": 1.0,
+      "detail": "1/1 sby tasks passed",
+      "hard_fail": false
+    }
+  ],
+  "weights": {
+    "lint": 10,
+    "elab": 10,
+    "sim_pass": 20,
+    "func_cov": 20,
+    "formal": 25,
+    "mutation": 15
+  }
+}
