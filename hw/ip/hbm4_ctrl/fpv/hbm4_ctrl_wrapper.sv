@@ -9,6 +9,7 @@ module hbm4_ctrl_fpv_wrapper;
 
   import hbm4_ctrl_pkg::*;
   import hbm4_ctrl_axi4_pkg::*;
+  import hbm4_ctrl_dfi_pkg::*;
 
   localparam int unsigned Aiw = AXI_ID_W;
   localparam int unsigned Aaw = AXI_ADDR_W;
@@ -60,6 +61,37 @@ module hbm4_ctrl_fpv_wrapper;
   logic                  drfm_ack_i;
   bank_state_e           fpv_bank0_state_o;
   logic [15:0]         fpv_bank0_ras_cnt_o;
+
+  localparam int unsigned DfiAddrW = hbm4_ctrl_dfi_pkg::DFI_ADDR_W;
+  localparam int unsigned DfiDataW = hbm4_ctrl_dfi_pkg::DFI_DATA_W;
+  localparam int unsigned DfiBgW   = hbm4_ctrl_dfi_pkg::DFI_BG_W;
+  localparam int unsigned DfiBankW = hbm4_ctrl_dfi_pkg::DFI_BANK_W;
+
+  logic [DfiAddrW-1:0]   dfi_address_o;
+  logic                  dfi_ras_n_o;
+  logic                  dfi_cas_n_o;
+  logic                  dfi_we_n_o;
+  logic [DfiBgW-1:0]     dfi_bank_group_o;
+  logic [DfiBankW-1:0]   dfi_bank_o;
+  logic                  dfi_cs_n_o;
+  logic                  dfi_cke_o;
+  logic                  dfi_reset_n_o;
+  logic [DfiDataW-1:0]   dfi_wrdata_o;
+  logic [DfiDataW/8-1:0] dfi_wrdata_mask_o;
+  logic                  dfi_wrdata_en_o;
+  logic                  dfi_wrdata_ack_i;
+  logic [DfiDataW-1:0]   dfi_rddata_i;
+  logic                  dfi_rddata_valid_i;
+  logic                  dfi_rddata_en_o;
+  logic                  dfi_ctrlupd_req_o;
+  logic                  dfi_ctrlupd_ack_i;
+  logic                  dfi_phyupd_req_i;
+  logic                  dfi_phyupd_ack_o;
+  logic                  dfi_lp_ctrl_req_o;
+  logic [3:0]            dfi_lp_ctrl_wakeup_o;
+  logic                  dfi_lp_ctrl_ack_i;
+  logic                  dfi_lp_data_req_o;
+  logic                  dfi_lp_data_ack_i;
 
   logic [15:0]         cyc_since_act;
 
@@ -142,6 +174,37 @@ module hbm4_ctrl_fpv_wrapper;
   logic [COL_W-1:0]     cmd_col_arr [0:0];
   logic                  drfm_req_arr [0:0];
   logic                  drfm_ack_arr [0:0];
+  logic [DfiAddrW-1:0]   dfi_address_arr [0:0];
+  logic                  dfi_ras_n_arr [0:0];
+  logic                  dfi_cas_n_arr [0:0];
+  logic                  dfi_we_n_arr [0:0];
+  logic [DfiBgW-1:0]     dfi_bank_group_arr [0:0];
+  logic [DfiBankW-1:0]   dfi_bank_arr [0:0];
+  logic                  dfi_cs_n_arr [0:0];
+  logic                  dfi_cke_arr [0:0];
+  logic                  dfi_reset_n_arr [0:0];
+  logic [DfiDataW-1:0]   dfi_wrdata_arr [0:0];
+  logic [DfiDataW/8-1:0] dfi_wrdata_mask_arr [0:0];
+  logic                  dfi_wrdata_en_arr [0:0];
+  logic                  dfi_wrdata_ack_arr [0:0];
+  logic [DfiDataW-1:0]   dfi_rddata_arr [0:0];
+  logic                  dfi_rddata_valid_arr [0:0];
+  logic                  dfi_rddata_en_arr [0:0];
+  logic                  dfi_ctrlupd_req_arr [0:0];
+  logic                  dfi_ctrlupd_ack_arr [0:0];
+  logic                  dfi_phyupd_req_arr [0:0];
+  logic                  dfi_phyupd_ack_arr [0:0];
+  logic                  dfi_lp_ctrl_req_arr [0:0];
+  logic [3:0]            dfi_lp_ctrl_wakeup_arr [0:0];
+  logic                  dfi_lp_ctrl_ack_arr [0:0];
+  logic                  dfi_lp_data_req_arr [0:0];
+  logic                  dfi_lp_data_ack_arr [0:0];
+
+  assign dfi_wrdata_ack_i     = 1'b1;
+  assign dfi_rddata_i         = '0;
+  assign dfi_rddata_valid_i   = 1'b0;
+  assign dfi_lp_ctrl_ack_i    = 1'b0;
+  assign dfi_lp_data_ack_i    = 1'b0;
 
   assign awid_arr[0]     = awid_i;
   assign awaddr_arr[0]   = awaddr_i;
@@ -180,6 +243,33 @@ module hbm4_ctrl_fpv_wrapper;
   assign cmd_row_o   = cmd_row_arr[0];
   assign cmd_col_o   = cmd_col_arr[0];
   assign drfm_req_o  = drfm_req_arr[0];
+
+  assign dfi_address_o        = dfi_address_arr[0];
+  assign dfi_ras_n_o          = dfi_ras_n_arr[0];
+  assign dfi_cas_n_o          = dfi_cas_n_arr[0];
+  assign dfi_we_n_o           = dfi_we_n_arr[0];
+  assign dfi_bank_group_o     = dfi_bank_group_arr[0];
+  assign dfi_bank_o           = dfi_bank_arr[0];
+  assign dfi_cs_n_o           = dfi_cs_n_arr[0];
+  assign dfi_cke_o            = dfi_cke_arr[0];
+  assign dfi_reset_n_o        = dfi_reset_n_arr[0];
+  assign dfi_wrdata_o         = dfi_wrdata_arr[0];
+  assign dfi_wrdata_mask_o    = dfi_wrdata_mask_arr[0];
+  assign dfi_wrdata_en_o      = dfi_wrdata_en_arr[0];
+  assign dfi_rddata_en_o      = dfi_rddata_en_arr[0];
+  assign dfi_ctrlupd_req_o    = dfi_ctrlupd_req_arr[0];
+  assign dfi_phyupd_ack_o     = dfi_phyupd_ack_arr[0];
+  assign dfi_lp_ctrl_req_o    = dfi_lp_ctrl_req_arr[0];
+  assign dfi_lp_ctrl_wakeup_o = dfi_lp_ctrl_wakeup_arr[0];
+  assign dfi_lp_data_req_o    = dfi_lp_data_req_arr[0];
+
+  assign dfi_ctrlupd_ack_arr[0] = dfi_ctrlupd_ack_i;
+  assign dfi_phyupd_req_arr[0]    = dfi_phyupd_req_i;
+  assign dfi_wrdata_ack_arr[0]    = dfi_wrdata_ack_i;
+  assign dfi_rddata_arr[0]        = dfi_rddata_i;
+  assign dfi_rddata_valid_arr[0]  = dfi_rddata_valid_i;
+  assign dfi_lp_ctrl_ack_arr[0]   = dfi_lp_ctrl_ack_i;
+  assign dfi_lp_data_ack_arr[0]   = dfi_lp_data_ack_i;
 
   hbm4_ctrl #(
       .NUM_CHANNELS(1)
@@ -220,19 +310,47 @@ module hbm4_ctrl_fpv_wrapper;
       .cmd_bank_o         (cmd_bank_arr),
       .cmd_row_o          (cmd_row_arr),
       .cmd_col_o          (cmd_col_arr),
-      .drfm_req_o         (drfm_req_arr),
-      .drfm_ack_i         (drfm_ack_arr),
-      .fpv_bank0_state_o  (fpv_bank0_state_o),
-      .fpv_bank0_ras_cnt_o(fpv_bank0_ras_cnt_o)
+      .drfm_req_o           (drfm_req_arr),
+      .drfm_ack_i           (drfm_ack_arr),
+      .fpv_bank0_state_o    (fpv_bank0_state_o),
+      .fpv_bank0_ras_cnt_o  (fpv_bank0_ras_cnt_o),
+      .dfi_address_o        (dfi_address_arr),
+      .dfi_ras_n_o          (dfi_ras_n_arr),
+      .dfi_cas_n_o          (dfi_cas_n_arr),
+      .dfi_we_n_o           (dfi_we_n_arr),
+      .dfi_bank_group_o     (dfi_bank_group_arr),
+      .dfi_bank_o           (dfi_bank_arr),
+      .dfi_cs_n_o           (dfi_cs_n_arr),
+      .dfi_cke_o            (dfi_cke_arr),
+      .dfi_reset_n_o        (dfi_reset_n_arr),
+      .dfi_wrdata_o         (dfi_wrdata_arr),
+      .dfi_wrdata_mask_o    (dfi_wrdata_mask_arr),
+      .dfi_wrdata_en_o      (dfi_wrdata_en_arr),
+      .dfi_wrdata_ack_i     (dfi_wrdata_ack_arr),
+      .dfi_rddata_i         (dfi_rddata_arr),
+      .dfi_rddata_valid_i   (dfi_rddata_valid_arr),
+      .dfi_rddata_en_o      (dfi_rddata_en_arr),
+      .dfi_ctrlupd_req_o    (dfi_ctrlupd_req_arr),
+      .dfi_ctrlupd_ack_i    (dfi_ctrlupd_ack_arr),
+      .dfi_phyupd_req_i     (dfi_phyupd_req_arr),
+      .dfi_phyupd_ack_o     (dfi_phyupd_ack_arr),
+      .dfi_lp_ctrl_req_o    (dfi_lp_ctrl_req_arr),
+      .dfi_lp_ctrl_wakeup_o (dfi_lp_ctrl_wakeup_arr),
+      .dfi_lp_ctrl_ack_i    (dfi_lp_ctrl_ack_arr),
+      .dfi_lp_data_req_o    (dfi_lp_data_req_arr),
+      .dfi_lp_data_ack_i    (dfi_lp_data_ack_arr)
   );
 
   hbm4_ctrl_abs u_abs (
-      .clk_i       (clk_i),
-      .rst_ni      (rst_ni),
-      .awvalid_i   (awvalid_i),
-      .awaddr_i    (awaddr_i),
-      .arvalid_i   (arvalid_i),
-      .drfm_ack_i  (drfm_ack_i)
+      .clk_i               (clk_i),
+      .rst_ni              (rst_ni),
+      .awvalid_i           (awvalid_i),
+      .awaddr_i            (awaddr_i),
+      .arvalid_i           (arvalid_i),
+      .drfm_ack_i          (drfm_ack_i),
+      .dfi_ctrlupd_req_i   (dfi_ctrlupd_req_o),
+      .dfi_ctrlupd_ack_i   (dfi_ctrlupd_ack_i),
+      .dfi_phyupd_req_i    (dfi_phyupd_req_i)
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_cyc_act
@@ -256,6 +374,29 @@ module hbm4_ctrl_fpv_wrapper;
 
   a_ras : assert property (@(posedge clk_i) disable iff (!rst_ni)
       (cmd_valid_o && (cmd_bank_o == '0) && (cmd_o == PRE)) |-> (fpv_bank0_ras_cnt_o >= T_RAS));
+
+  property p_ctrlupd_hold;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (dut.g_channel[0].u_chan.u_dfi.dfi_ctrlupd_req_o &&
+     !dut.g_channel[0].u_chan.u_dfi.dfi_ctrlupd_ack_i) |=>
+    dut.g_channel[0].u_chan.u_dfi.dfi_ctrlupd_req_o;
+  endproperty
+  ap_ctrlupd_hold: assert property (p_ctrlupd_hold);
+
+  property p_no_cmd_ctrlupd;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (dut.g_channel[0].u_chan.u_dfi.dfi_ctrlupd_req_o &&
+     dut.g_channel[0].u_chan.u_dfi.dfi_ctrlupd_ack_i) |->
+    dut.g_channel[0].u_chan.u_dfi.dfi_cs_n_o;
+  endproperty
+  ap_no_cmd_ctrlupd: assert property (p_no_cmd_ctrlupd);
+
+  property p_phyupd_gated;
+    @(posedge clk_i) disable iff (!rst_ni)
+    dut.g_channel[0].u_chan.u_dfi.dfi_phyupd_ack_o |->
+    dut.g_channel[0].u_chan.u_dfi.dfi_phyupd_req_i;
+  endproperty
+  ap_phyupd_gated: assert property (p_phyupd_gated);
 
 endmodule : hbm4_ctrl_fpv_wrapper
 

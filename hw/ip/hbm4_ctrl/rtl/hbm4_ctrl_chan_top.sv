@@ -64,10 +64,37 @@ module hbm4_ctrl_chan_top #(
     output logic                  drfm_req_o,
     input  logic                  drfm_ack_i,
     output hbm4_ctrl_pkg::bank_state_e fpv_bank0_state_o,
-    output logic [15:0]           fpv_bank0_ras_cnt_o
+    output logic [15:0]           fpv_bank0_ras_cnt_o,
+
+    output logic [hbm4_ctrl_dfi_pkg::DFI_ADDR_W-1:0]   dfi_address_o,
+    output logic                                       dfi_ras_n_o,
+    output logic                                       dfi_cas_n_o,
+    output logic                                       dfi_we_n_o,
+    output logic [hbm4_ctrl_dfi_pkg::DFI_BG_W-1:0]     dfi_bank_group_o,
+    output logic [hbm4_ctrl_dfi_pkg::DFI_BANK_W-1:0]   dfi_bank_o,
+    output logic                                       dfi_cs_n_o,
+    output logic                                       dfi_cke_o,
+    output logic                                       dfi_reset_n_o,
+    output logic [hbm4_ctrl_dfi_pkg::DFI_DATA_W-1:0]   dfi_wrdata_o,
+    output logic [hbm4_ctrl_dfi_pkg::DFI_DATA_W/8-1:0] dfi_wrdata_mask_o,
+    output logic                                       dfi_wrdata_en_o,
+    input  logic                                       dfi_wrdata_ack_i,
+    input  logic [hbm4_ctrl_dfi_pkg::DFI_DATA_W-1:0]   dfi_rddata_i,
+    input  logic                                       dfi_rddata_valid_i,
+    output logic                                       dfi_rddata_en_o,
+    output logic                                       dfi_ctrlupd_req_o,
+    input  logic                                       dfi_ctrlupd_ack_i,
+    input  logic                                       dfi_phyupd_req_i,
+    output logic                                       dfi_phyupd_ack_o,
+    output logic                                       dfi_lp_ctrl_req_o,
+    output logic [3:0]                                 dfi_lp_ctrl_wakeup_o,
+    input  logic                                       dfi_lp_ctrl_ack_i,
+    output logic                                       dfi_lp_data_req_o,
+    input  logic                                       dfi_lp_data_ack_i
 );
 
   import hbm4_ctrl_pkg::*;
+  import hbm4_ctrl_dfi_pkg::*;
 
   localparam int unsigned NumB = BANK_GROUPS * BANKS_PER_BG;
 
@@ -78,8 +105,15 @@ module hbm4_ctrl_chan_top #(
   logic                  int_req_we;
   logic                  int_req_ready;
 
+  logic                  sched_cmd_valid;
+  cmd_e                  sched_cmd;
+  bank_addr_t            sched_cmd_bank;
+  logic [ROW_W-1:0]      sched_cmd_row;
+  logic [COL_W-1:0]      sched_cmd_col;
+  logic                  cmd_accepted;
+
   logic cmd_fire;
-  assign cmd_fire = cmd_valid_o;
+  assign cmd_fire = sched_cmd_valid;
 
   hbm4_ctrl_axi4_slave #(
       .P_AXI_ID_W(AXI_ID_W),
@@ -128,8 +162,8 @@ module hbm4_ctrl_chan_top #(
       .core_req_we_o      (int_req_we),
       .core_req_ready_i   (int_req_ready),
       .cmd_fire_i         (cmd_fire),
-      .cmd_i              (cmd_o),
-      .cmd_bank_i         (cmd_bank_o)
+      .cmd_i              (sched_cmd),
+      .cmd_bank_i         (sched_cmd_bank)
   );
 
   logic [NumB-1:0]                 b_req_ready;
@@ -207,13 +241,61 @@ module hbm4_ctrl_chan_top #(
       .bank_cmd_i          (b_cmd),
       .bank_cmd_row_i      (b_cmd_row),
       .bank_cmd_col_i      (b_cmd_col),
-      .cmd_valid_o         (cmd_valid_o),
-      .cmd_o               (cmd_o),
-      .cmd_bank_o          (cmd_bank_o),
-      .cmd_row_o           (cmd_row_o),
-      .cmd_col_o           (cmd_col_o),
-      .cmd_accepted_i      (cmd_valid_o),
+      .cmd_valid_o         (sched_cmd_valid),
+      .cmd_o               (sched_cmd),
+      .cmd_bank_o          (sched_cmd_bank),
+      .cmd_row_o           (sched_cmd_row),
+      .cmd_col_o           (sched_cmd_col),
+      .cmd_accepted_i      (cmd_accepted),
       .bank_cmd_accepted_o (b_cmd_accept)
+  );
+
+  assign cmd_valid_o = sched_cmd_valid;
+  assign cmd_o       = sched_cmd;
+  assign cmd_bank_o  = sched_cmd_bank;
+  assign cmd_row_o   = sched_cmd_row;
+  assign cmd_col_o   = sched_cmd_col;
+
+  hbm4_ctrl_dfi_bridge #(
+      .NUM_BANKS    (NumB),
+      .BANKS_PER_BG (BANKS_PER_BG),
+      .ROW_W        (ROW_W),
+      .COL_W        (COL_W)
+  ) u_dfi (
+      .clk_i                (clk_i),
+      .rst_ni               (rst_ni),
+      .cmd_valid_i          (sched_cmd_valid),
+      .cmd_i                (sched_cmd),
+      .cmd_row_i            (sched_cmd_row),
+      .cmd_col_i            (sched_cmd_col),
+      .cmd_bank_i           (sched_cmd_bank),
+      .cmd_accepted_o       (cmd_accepted),
+      .dfi_address_o        (dfi_address_o),
+      .dfi_ras_n_o          (dfi_ras_n_o),
+      .dfi_cas_n_o          (dfi_cas_n_o),
+      .dfi_we_n_o           (dfi_we_n_o),
+      .dfi_bank_group_o     (dfi_bank_group_o),
+      .dfi_bank_o           (dfi_bank_o),
+      .dfi_cs_n_o           (dfi_cs_n_o),
+      .dfi_cke_o            (dfi_cke_o),
+      .dfi_reset_n_o        (dfi_reset_n_o),
+      .dfi_wrdata_o         (dfi_wrdata_o),
+      .dfi_wrdata_mask_o    (dfi_wrdata_mask_o),
+      .dfi_wrdata_en_o      (dfi_wrdata_en_o),
+      .dfi_wrdata_ack_i     (dfi_wrdata_ack_i),
+      .dfi_rddata_i         (dfi_rddata_i),
+      .dfi_rddata_valid_i   (dfi_rddata_valid_i),
+      .dfi_rddata_en_o      (dfi_rddata_en_o),
+      .dfi_ctrlupd_req_o    (dfi_ctrlupd_req_o),
+      .dfi_ctrlupd_ack_i    (dfi_ctrlupd_ack_i),
+      .dfi_phyupd_req_i     (dfi_phyupd_req_i),
+      .dfi_phyupd_ack_o     (dfi_phyupd_ack_o),
+      .dfi_lp_ctrl_req_o    (dfi_lp_ctrl_req_o),
+      .dfi_lp_ctrl_wakeup_o (dfi_lp_ctrl_wakeup_o),
+      .dfi_lp_ctrl_ack_i    (dfi_lp_ctrl_ack_i),
+      .dfi_lp_data_req_o    (dfi_lp_data_req_o),
+      .dfi_lp_data_ack_i    (dfi_lp_data_ack_i),
+      .inhibit_cmds_i       (1'b0)
   );
 
   always_comb begin : g_rr

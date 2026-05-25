@@ -32,6 +32,11 @@ def _port(dut, name: str, ch: int = 0):
     return sig[ch]
 
 
+def _dfi(dut, name: str, ch: int = 0):
+    """DFI bridge hierarchical signal (channel ch)."""
+    return getattr(dut.g_channel[ch].u_chan.u_dfi, name)
+
+
 def _touch(cp: str, bn: str) -> None:
     if cp not in COV:
         COV[cp] = {}
@@ -83,6 +88,13 @@ def _drive_all_inputs_idle(dut) -> None:
         _port(dut, "arvalid_i", ch).value = 0
         _port(dut, "rready_i", ch).value = 0
         _port(dut, "drfm_ack_i", ch).value = 0
+        _port(dut, "dfi_wrdata_ack_i", ch).value = 1
+        _port(dut, "dfi_rddata_i", ch).value = 0
+        _port(dut, "dfi_rddata_valid_i", ch).value = 0
+        _port(dut, "dfi_ctrlupd_ack_i", ch).value = 0
+        _port(dut, "dfi_phyupd_req_i", ch).value = 0
+        _port(dut, "dfi_lp_ctrl_ack_i", ch).value = 0
+        _port(dut, "dfi_lp_data_ack_i", ch).value = 0
 
 
 async def _tb_begin(dut, watchdog_cycles: int = 2000) -> None:
@@ -492,4 +504,150 @@ async def test_multichan_refresh_all(dut) -> None:
 
     assert saw0 and saw1, "DRFM must assert on channels 0 and 1"
     _touch("multichan", "refresh_all")
+    _write_coverage()
+
+
+@cocotb.test()
+async def test_dfi_act_encoding(dut) -> None:
+    await _tb_begin(dut)
+    bank = 0
+    row = 2
+
+    async def wait_act() -> None:
+        for _ in range(500):
+            await RisingEdge(dut.clk_i)
+            await ReadOnly()
+            await Timer(1, unit="ps")
+            if int(_port(dut, "cmd_valid_o").value) and int(_port(dut, "cmd_bank_o").value) == bank:
+                if int(_port(dut, "cmd_o").value) == int(Cmd.ACT):
+                    assert int(_dfi(dut, "dfi_ras_n_o").value) == 0
+                    assert int(_dfi(dut, "dfi_cas_n_o").value) == 1
+                    assert int(_dfi(dut, "dfi_we_n_o").value) == 1
+                    assert int(_dfi(dut, "dfi_cs_n_o").value) == 0
+                    return
+        assert False, "ACT not observed"
+
+    mon = cocotb.start_soon(wait_act())
+    await _axi_write_single(dut, bank=bank, row=row, col=0)
+    await mon
+    _touch("dfi", "act_encoding")
+    _write_coverage()
+
+
+@cocotb.test()
+async def test_dfi_rd_encoding(dut) -> None:
+    await _tb_begin(dut)
+    bank = 0
+    row = 6
+
+    await _axi_write_single(dut, bank=bank, row=row, col=0)
+    for _ in range(4):
+        await RisingEdge(dut.clk_i)
+
+    async def wait_rd() -> None:
+        for _ in range(500):
+            await RisingEdge(dut.clk_i)
+            await ReadOnly()
+            await Timer(1, unit="ps")
+            if int(_port(dut, "cmd_valid_o").value) and int(_port(dut, "cmd_bank_o").value) == bank:
+                if int(_port(dut, "cmd_o").value) == int(Cmd.RD):
+                    assert int(_dfi(dut, "dfi_cas_n_o").value) == 0
+                    assert int(_dfi(dut, "dfi_ras_n_o").value) == 1
+                    assert int(_dfi(dut, "dfi_we_n_o").value) == 1
+                    assert int(_dfi(dut, "dfi_rddata_en_o").value) == 1
+                    return
+        assert False, "RD not observed after ACT"
+
+    mon = cocotb.start_soon(wait_rd())
+    await _axi_read_single(dut, bank=bank, row=row, col=0)
+    await mon
+    _touch("dfi", "rd_encoding")
+    _write_coverage()
+
+
+@cocotb.test()
+async def test_dfi_wr_encoding(dut) -> None:
+    await _tb_begin(dut)
+    bank = 0
+    row = 8
+
+    await _axi_write_single(dut, bank=bank, row=row, col=0)
+    for _ in range(4):
+        await RisingEdge(dut.clk_i)
+
+    async def wait_wr() -> None:
+        for _ in range(500):
+            await RisingEdge(dut.clk_i)
+            await ReadOnly()
+            await Timer(1, unit="ps")
+            if int(_port(dut, "cmd_valid_o").value) and int(_port(dut, "cmd_bank_o").value) == bank:
+                if int(_port(dut, "cmd_o").value) == int(Cmd.WR):
+                    assert int(_dfi(dut, "dfi_cas_n_o").value) == 0
+                    assert int(_dfi(dut, "dfi_we_n_o").value) == 0
+                    assert int(_dfi(dut, "dfi_wrdata_en_o").value) == 1
+                    assert int(_dfi(dut, "dfi_wrdata_mask_o").value) == 0
+                    return
+        assert False, "WR not observed after ACT"
+
+    mon = cocotb.start_soon(wait_wr())
+    await _axi_write_single(dut, bank=bank, row=row, col=1)
+    await mon
+    _touch("dfi", "wr_encoding")
+    _write_coverage()
+
+
+@cocotb.test()
+async def test_dfi_ctrlupd_handshake(dut) -> None:
+    await _tb_begin(dut, watchdog_cycles=6000)
+
+    saw_req = False
+    for _ in range(5000):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        await Timer(1, unit="ps")
+        if int(_port(dut, "dfi_ctrlupd_req_o").value):
+            saw_req = True
+            break
+    assert saw_req, "dfi_ctrlupd_req_o never asserted"
+
+    for _ in range(2):
+        _port(dut, "dfi_ctrlupd_ack_i").value = 1
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        await Timer(1, unit="ps")
+        assert int(_port(dut, "dfi_ctrlupd_req_o").value) == 1, "req must stay high while ack"
+
+    _port(dut, "dfi_ctrlupd_ack_i").value = 0
+    deasserted = False
+    for _ in range(2):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        await Timer(1, unit="ps")
+        if not int(_port(dut, "dfi_ctrlupd_req_o").value):
+            deasserted = True
+            break
+    assert deasserted, "dfi_ctrlupd_req_o did not deassert within 2 cycles after ack drop"
+    _touch("dfi", "ctrlupd_handshake")
+    _write_coverage()
+
+
+@cocotb.test()
+async def test_dfi_phyupd_ack(dut) -> None:
+    await _tb_begin(dut)
+
+    _port(dut, "dfi_phyupd_req_i").value = 1
+    await RisingEdge(dut.clk_i)
+    await ReadOnly()
+    await Timer(1, unit="ps")
+    assert int(_port(dut, "dfi_phyupd_ack_o").value) == 1, "phyupd_ack within 1 cycle of req"
+
+    for _ in range(2):
+        await RisingEdge(dut.clk_i)
+
+    _port(dut, "dfi_phyupd_req_i").value = 0
+    await RisingEdge(dut.clk_i)
+    await ReadOnly()
+    await Timer(1, unit="ps")
+    assert int(_port(dut, "dfi_phyupd_ack_o").value) == 0, "phyupd_ack must drop within 1 cycle of req deassert"
+    _touch("dfi", "phyupd_ack")
     _write_coverage()

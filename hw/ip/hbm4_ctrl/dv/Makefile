@@ -11,11 +11,13 @@ export COCOTB_RESULTS_FILE := $(CURDIR)/results.xml
 export PYTHONUNBUFFERED := 1
 
 VERILOG_SOURCES = \
+  $(CURDIR)/../rtl/hbm4_ctrl_dfi_pkg.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_axi4_pkg.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_pkg.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_axi4_slave.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_bank_fsm.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_scheduler.sv \
+  $(CURDIR)/../rtl/hbm4_ctrl_dfi_bridge.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_chan_top.sv \
   $(CURDIR)/../rtl/hbm4_ctrl.sv
 

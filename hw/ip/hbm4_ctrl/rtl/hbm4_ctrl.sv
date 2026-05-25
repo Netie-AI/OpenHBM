@@ -64,7 +64,33 @@ module hbm4_ctrl #(
     output logic                  drfm_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     input  logic                  drfm_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     output hbm4_ctrl_pkg::bank_state_e fpv_bank0_state_o,
-    output logic [15:0]                fpv_bank0_ras_cnt_o
+    output logic [15:0]                fpv_bank0_ras_cnt_o,
+
+    output logic [hbm4_ctrl_dfi_pkg::DFI_ADDR_W-1:0] dfi_address_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_ras_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_cas_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_we_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [hbm4_ctrl_dfi_pkg::DFI_BG_W-1:0] dfi_bank_group_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [hbm4_ctrl_dfi_pkg::DFI_BANK_W-1:0] dfi_bank_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_cs_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_cke_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_reset_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [hbm4_ctrl_dfi_pkg::DFI_DATA_W-1:0] dfi_wrdata_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [hbm4_ctrl_dfi_pkg::DFI_DATA_W/8-1:0] dfi_wrdata_mask_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_wrdata_en_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_wrdata_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [hbm4_ctrl_dfi_pkg::DFI_DATA_W-1:0] dfi_rddata_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_rddata_valid_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_rddata_en_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_ctrlupd_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_ctrlupd_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_phyupd_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_phyupd_ack_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_lp_ctrl_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [3:0] dfi_lp_ctrl_wakeup_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_lp_ctrl_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_lp_data_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_lp_data_ack_i [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
 );
 
   import hbm4_ctrl_pkg::*;
@@ -125,10 +151,35 @@ module hbm4_ctrl #(
           .cmd_bank_o         (cmd_bank_o[ch]),
           .cmd_row_o          (cmd_row_o[ch]),
           .cmd_col_o          (cmd_col_o[ch]),
-          .drfm_req_o         (drfm_req_o[ch]),
-          .drfm_ack_i         (drfm_ack_i[ch]),
-          .fpv_bank0_state_o  (fpv_bank_state[ch]),
-          .fpv_bank0_ras_cnt_o(fpv_bank_ras[ch])
+          .drfm_req_o           (drfm_req_o[ch]),
+          .drfm_ack_i           (drfm_ack_i[ch]),
+          .fpv_bank0_state_o    (fpv_bank_state[ch]),
+          .fpv_bank0_ras_cnt_o  (fpv_bank_ras[ch]),
+          .dfi_address_o        (dfi_address_o[ch]),
+          .dfi_ras_n_o          (dfi_ras_n_o[ch]),
+          .dfi_cas_n_o          (dfi_cas_n_o[ch]),
+          .dfi_we_n_o           (dfi_we_n_o[ch]),
+          .dfi_bank_group_o     (dfi_bank_group_o[ch]),
+          .dfi_bank_o           (dfi_bank_o[ch]),
+          .dfi_cs_n_o           (dfi_cs_n_o[ch]),
+          .dfi_cke_o            (dfi_cke_o[ch]),
+          .dfi_reset_n_o        (dfi_reset_n_o[ch]),
+          .dfi_wrdata_o         (dfi_wrdata_o[ch]),
+          .dfi_wrdata_mask_o    (dfi_wrdata_mask_o[ch]),
+          .dfi_wrdata_en_o      (dfi_wrdata_en_o[ch]),
+          .dfi_wrdata_ack_i     (dfi_wrdata_ack_i[ch]),
+          .dfi_rddata_i         (dfi_rddata_i[ch]),
+          .dfi_rddata_valid_i   (dfi_rddata_valid_i[ch]),
+          .dfi_rddata_en_o      (dfi_rddata_en_o[ch]),
+          .dfi_ctrlupd_req_o    (dfi_ctrlupd_req_o[ch]),
+          .dfi_ctrlupd_ack_i    (dfi_ctrlupd_ack_i[ch]),
+          .dfi_phyupd_req_i     (dfi_phyupd_req_i[ch]),
+          .dfi_phyupd_ack_o     (dfi_phyupd_ack_o[ch]),
+          .dfi_lp_ctrl_req_o    (dfi_lp_ctrl_req_o[ch]),
+          .dfi_lp_ctrl_wakeup_o (dfi_lp_ctrl_wakeup_o[ch]),
+          .dfi_lp_ctrl_ack_i    (dfi_lp_ctrl_ack_i[ch]),
+          .dfi_lp_data_req_o    (dfi_lp_data_req_o[ch]),
+          .dfi_lp_data_ack_i    (dfi_lp_data_ack_i[ch])
       );
     end
   endgenerate

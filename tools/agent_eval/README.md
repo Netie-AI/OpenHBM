@@ -56,10 +56,24 @@ Score weights (default; per-IP overrides in
 
 ## Running
 
+Activate the repo venv **and** OSS CAD Suite before any harness or `pip` use:
+
+```bash
+source .venv/bin/activate
+source ~/oss-cad-suite/environment   # verilator, sby, yosys on PATH
+```
+
+Install Python deps only through the venv (system Python is blocked on many hosts):
+
+```bash
+.venv/bin/pip install -r requirements.txt   # or: make install  (uv sync)
+```
+
 ```bash
 make agent-eval PROMPT=docs/agent-prompts/addr_map.md
 # or
-nieda-eval --prompt docs/agent-prompts/addr_map.md
+.venv/bin/python3 -m tools.agent_eval.harness.run --ip addr_map
+```
 
 # Run the corpus regression (used in CI):
 nieda-eval --corpus tools/agent_eval/corpus/ --gate 80 --report build/eval.json
