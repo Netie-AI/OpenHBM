@@ -99,7 +99,17 @@ module hbm4_ctrl_chan_top #(
 
     input  logic [7:0]                                 temp_celsius_i,
     output logic [15:0]                                trefi_cycles_o,
-    output hbm4_ctrl_pkg::temp_band_e                  temp_band_o
+    output hbm4_ctrl_pkg::temp_band_e                  temp_band_o,
+
+    input  logic                                       wrlvl_req_i,
+    input  logic                                       rdlvl_req_i,
+    input  logic                                       dfi_wrlvl_ack_i,
+    input  logic                                       dfi_rdlvl_ack_i,
+    output logic                                       dfi_wrlvl_req_o,
+    output logic                                       dfi_rdlvl_req_o,
+    output logic                                       training_done_o,
+    output logic                                       training_err_o,
+    output hbm4_ctrl_pkg::train_state_e                train_state_o
 );
 
   import hbm4_ctrl_pkg::*;
@@ -218,8 +228,24 @@ module hbm4_ctrl_chan_top #(
 
   assign drfm_req_o = drfm_arm_q;
 
+  hbm4_ctrl_training u_training (
+      .clk_i           (clk_i),
+      .rst_ni          (rst_ni),
+      .wrlvl_req_i     (wrlvl_req_i),
+      .rdlvl_req_i     (rdlvl_req_i),
+      .dfi_wrlvl_req_o (dfi_wrlvl_req_o),
+      .dfi_rdlvl_req_o (dfi_rdlvl_req_o),
+      .dfi_wrlvl_ack_i (dfi_wrlvl_ack_i),
+      .dfi_rdlvl_ack_i (dfi_rdlvl_ack_i),
+      .inhibit_cmds_o  (chan_train_inhibit),
+      .training_done_o (training_done_o),
+      .training_err_o  (training_err_o),
+      .train_state_o   (train_state_o)
+  );
+
   logic [NumB-1:0] bank_idle_bus;
   logic            chan_inhibit;
+  logic            chan_train_inhibit;
   logic            chan_cke_req;
 
   always_comb begin : g_bank_idle
@@ -342,7 +368,7 @@ module hbm4_ctrl_chan_top #(
       .dfi_lp_ctrl_ack_i    (dfi_lp_ctrl_ack_i),
       .dfi_lp_data_req_o    (dfi_lp_data_req_o),
       .dfi_lp_data_ack_i    (dfi_lp_data_ack_i),
-      .inhibit_cmds_i       (chan_inhibit),
+      .inhibit_cmds_i       (chan_inhibit | chan_train_inhibit),
       .cke_req_i            (chan_cke_req)
   );
 

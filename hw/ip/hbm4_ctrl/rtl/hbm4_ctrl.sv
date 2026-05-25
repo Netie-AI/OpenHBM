@@ -98,7 +98,17 @@ module hbm4_ctrl #(
     output hbm4_ctrl_pkg::chan_pw_state_e pw_state_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
 
     input  logic [7:0] temp_celsius_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
-    output logic [15:0] trefi_cycles_o [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [15:0] trefi_cycles_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    input  logic wrlvl_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic rdlvl_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_wrlvl_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_rdlvl_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_wrlvl_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_rdlvl_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic training_done_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic training_err_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::train_state_e train_state_o [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
 );
 
   import hbm4_ctrl_pkg::*;
@@ -194,7 +204,16 @@ module hbm4_ctrl #(
           .pw_state_o           (pw_state_o[ch]),
           .temp_celsius_i       (temp_celsius_i[ch]),
           .trefi_cycles_o       (trefi_cycles_o[ch]),
-          .temp_band_o          ()
+          .temp_band_o          (),
+          .wrlvl_req_i          (wrlvl_req_i[ch]),
+          .rdlvl_req_i          (rdlvl_req_i[ch]),
+          .dfi_wrlvl_ack_i      (dfi_wrlvl_ack_i[ch]),
+          .dfi_rdlvl_ack_i      (dfi_rdlvl_ack_i[ch]),
+          .dfi_wrlvl_req_o      (dfi_wrlvl_req_o[ch]),
+          .dfi_rdlvl_req_o      (dfi_rdlvl_req_o[ch]),
+          .training_done_o      (training_done_o[ch]),
+          .training_err_o       (training_err_o[ch]),
+          .train_state_o        (train_state_o[ch])
       );
     end
   endgenerate

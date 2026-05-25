@@ -99,6 +99,10 @@ def _drive_all_inputs_idle(dut) -> None:
         _port(dut, "sref_req_i", ch).value = 0
         _port(dut, "exit_req_i", ch).value = 0
         _port(dut, "temp_celsius_i", ch).value = 65
+        _port(dut, "wrlvl_req_i", ch).value = 0
+        _port(dut, "rdlvl_req_i", ch).value = 0
+        _port(dut, "dfi_wrlvl_ack_i", ch).value = 0
+        _port(dut, "dfi_rdlvl_ack_i", ch).value = 0
 
 
 async def _tb_begin(dut, watchdog_cycles: int = 2000) -> None:
@@ -889,3 +893,139 @@ async def test_trefi_hysteresis_hot_to_normal(dut) -> None:
         await Timer(1, unit="ps")
     val = _port(dut, "trefi_cycles_o", 0).value
     assert int(val) == 7800, f"Should be NORMAL at 83°C, trefi={int(val)}"
+
+
+@cocotb.test()
+async def test_wrlvl_normal(dut) -> None:
+    """wrlvl_req → DFI req → ack → training_done pulse, back to IDLE."""
+    await _tb_begin(dut)
+
+    _port(dut, "wrlvl_req_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "wrlvl_req_i", 0).value = 0
+
+    for _ in range(5):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    _port(dut, "dfi_wrlvl_ack_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "dfi_wrlvl_ack_i", 0).value = 0
+
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    assert int(_port(dut, "training_err_o", 0).value) == 0, "Unexpected error"
+    assert int(_port(dut, "train_state_o", 0).value) == 0, (
+        f"Expected TRAIN_IDLE(0), got {_port(dut, 'train_state_o', 0).value}"
+    )
+
+
+@cocotb.test()
+async def test_rdlvl_normal(dut) -> None:
+    """rdlvl_req → DFI req → ack → training_done pulse, back to IDLE."""
+    await _tb_begin(dut)
+
+    _port(dut, "rdlvl_req_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "rdlvl_req_i", 0).value = 0
+
+    for _ in range(5):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    _port(dut, "dfi_rdlvl_ack_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "dfi_rdlvl_ack_i", 0).value = 0
+
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    assert int(_port(dut, "training_err_o", 0).value) == 0
+    assert int(_port(dut, "train_state_o", 0).value) == 0, (
+        f"Expected IDLE, got {_port(dut, 'train_state_o', 0).value}"
+    )
+
+
+@cocotb.test()
+async def test_wrlvl_timeout(dut) -> None:
+    """No ack within 1024 cycles → training_err_o asserts."""
+    await _tb_begin(dut, watchdog_cycles=2500)
+
+    _port(dut, "wrlvl_req_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "wrlvl_req_i", 0).value = 0
+
+    for _ in range(1030):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    assert int(_port(dut, "training_err_o", 0).value) == 1, (
+        "Expected training_err_o after timeout"
+    )
+    assert int(_port(dut, "train_state_o", 0).value) == 4, (
+        f"Expected TRAIN_ERR(4), got {_port(dut, 'train_state_o', 0).value}"
+    )
+
+
+@cocotb.test()
+async def test_err_clears_on_new_req(dut) -> None:
+    """training_err_o clears when a new training req is issued."""
+    await _tb_begin(dut, watchdog_cycles=2500)
+
+    _port(dut, "wrlvl_req_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "wrlvl_req_i", 0).value = 0
+    for _ in range(1030):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    assert int(_port(dut, "training_err_o", 0).value) == 1
+
+    _port(dut, "rdlvl_req_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "rdlvl_req_i", 0).value = 0
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+
+    assert int(_port(dut, "training_err_o", 0).value) == 0, (
+        "Error should clear on new req"
+    )
+
+
+@cocotb.test()
+async def test_training_inhibits_traffic(dut) -> None:
+    """
+    During write leveling, an AXI4 write must not produce
+    a DFI command (inhibit_cmds blocks it).
+    """
+    await _tb_begin(dut)
+
+    _port(dut, "wrlvl_req_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "wrlvl_req_i", 0).value = 0
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    assert int(_port(dut, "train_state_o", 0).value) == 1, (
+        f"Expected TRAIN_WRLVL(1), got {_port(dut, 'train_state_o', 0).value}"
+    )
+
+    _port(dut, "dfi_wrlvl_ack_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "dfi_wrlvl_ack_i", 0).value = 0
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    assert int(_port(dut, "train_state_o", 0).value) == 0, "Should return to IDLE"

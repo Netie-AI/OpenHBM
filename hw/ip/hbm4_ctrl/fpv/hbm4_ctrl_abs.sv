@@ -22,7 +22,13 @@ module hbm4_ctrl_abs #(
     input logic                    pwrdn_req_i,
     input logic                    sref_req_i,
     input logic                    exit_req_i,
-    input logic [7:0]              temp_celsius_i
+    input logic [7:0]              temp_celsius_i,
+    input logic                    wrlvl_req_i,
+    input logic                    rdlvl_req_i,
+    input logic                    dfi_wrlvl_req_o,
+    input logic                    dfi_rdlvl_req_o,
+    input logic                    dfi_wrlvl_ack_i,
+    input logic                    dfi_rdlvl_ack_i
 );
 
   assume property (@(posedge clk_i) disable iff (!rst_ni) !$isunknown(awvalid_i));
@@ -65,6 +71,16 @@ module hbm4_ctrl_abs #(
   // Constrain temperature to realistic sensor range
   assume property (@(posedge clk_i) disable iff (!rst_ni)
       (temp_celsius_i >= 8'd0) && (temp_celsius_i <= 8'd125));
+
+  // Training acks respond within 10 cycles of req
+  assume property (@(posedge clk_i) disable iff (!rst_ni)
+      dfi_wrlvl_req_o |-> ##[1:10] dfi_wrlvl_ack_i);
+  assume property (@(posedge clk_i) disable iff (!rst_ni)
+      dfi_rdlvl_req_o |-> ##[1:10] dfi_rdlvl_ack_i);
+
+  // No simultaneous wrlvl + rdlvl request from software
+  assume property (@(posedge clk_i) disable iff (!rst_ni)
+      !(wrlvl_req_i && rdlvl_req_i));
 
 endmodule : hbm4_ctrl_abs
 

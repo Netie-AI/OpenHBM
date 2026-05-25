@@ -73,4 +73,15 @@ package hbm4_ctrl_pkg;
   localparam int unsigned TREFI_HOT  = 3900;   // verilog_lint: waive parameter-name-style -- 0.5× base
   localparam int unsigned TEMP_HYST  = 2;      // verilog_lint: waive parameter-name-style -- °C guard
 
+  // P6 — Training FSM states
+  typedef enum logic [2:0] {
+    TRAIN_IDLE  = 3'd0,
+    TRAIN_WRLVL = 3'd1,
+    TRAIN_RDLVL = 3'd2,
+    TRAIN_DONE  = 3'd3,
+    TRAIN_ERR   = 3'd4
+  } train_state_e;
+
+  localparam int unsigned TRAIN_TIMEOUT = 1024;  // verilog_lint: waive parameter-name-style -- cycles before TRAIN_ERR
+
 endpackage : hbm4_ctrl_pkg

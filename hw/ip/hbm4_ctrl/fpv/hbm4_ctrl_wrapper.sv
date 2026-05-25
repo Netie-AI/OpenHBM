@@ -98,6 +98,10 @@ module hbm4_ctrl_fpv_wrapper;
   logic                  exit_req_i;
   hbm4_ctrl_pkg::chan_pw_state_e pw_state_o;
   logic [7:0]            temp_celsius_i;
+  logic                  wrlvl_req_i;
+  logic                  rdlvl_req_i;
+  logic                  dfi_wrlvl_ack_i;
+  logic                  dfi_rdlvl_ack_i;
 
   logic [15:0]         cyc_since_act;
 
@@ -126,6 +130,10 @@ module hbm4_ctrl_fpv_wrapper;
       sref_req_i  <= 1'b0;
       exit_req_i  <= 1'b0;
       temp_celsius_i <= 8'd65;
+      wrlvl_req_i    <= 1'b0;
+      rdlvl_req_i    <= 1'b0;
+      dfi_wrlvl_ack_i <= 1'b0;
+      dfi_rdlvl_ack_i <= 1'b0;
     end else begin
       awvalid_i  <= ~awvalid_i;
       awaddr_i   <= awaddr_i ^ Aaw'(32'h0000_0040);
@@ -215,6 +223,15 @@ module hbm4_ctrl_fpv_wrapper;
   hbm4_ctrl_pkg::chan_pw_state_e pw_state_arr [0:0];
   logic [7:0]            temp_celsius_arr [0:0];
   logic [15:0]           trefi_cycles_arr [0:0];
+  logic                  wrlvl_req_arr [0:0];
+  logic                  rdlvl_req_arr [0:0];
+  logic                  dfi_wrlvl_ack_arr [0:0];
+  logic                  dfi_rdlvl_ack_arr [0:0];
+  logic                  dfi_wrlvl_req_arr [0:0];
+  logic                  dfi_rdlvl_req_arr [0:0];
+  logic                  training_done_arr [0:0];
+  logic                  training_err_arr [0:0];
+  hbm4_ctrl_pkg::train_state_e train_state_arr [0:0];
 
   assign dfi_wrdata_ack_i     = 1'b1;
   assign dfi_rddata_i         = '0;
@@ -245,6 +262,10 @@ module hbm4_ctrl_fpv_wrapper;
   assign sref_req_arr[0]  = sref_req_i;
   assign exit_req_arr[0]  = exit_req_i;
   assign temp_celsius_arr[0] = temp_celsius_i;
+  assign wrlvl_req_arr[0]    = wrlvl_req_i;
+  assign rdlvl_req_arr[0]    = rdlvl_req_i;
+  assign dfi_wrlvl_ack_arr[0] = dfi_wrlvl_ack_i;
+  assign dfi_rdlvl_ack_arr[0] = dfi_rdlvl_ack_i;
 
   assign awready_o   = awready_arr[0];
   assign wready_o    = wready_arr[0];
@@ -364,8 +385,27 @@ module hbm4_ctrl_fpv_wrapper;
       .exit_req_i           (exit_req_arr),
       .pw_state_o           (pw_state_arr),
       .temp_celsius_i       (temp_celsius_arr),
-      .trefi_cycles_o       (trefi_cycles_arr)
+      .trefi_cycles_o       (trefi_cycles_arr),
+      .wrlvl_req_i          (wrlvl_req_arr),
+      .rdlvl_req_i          (rdlvl_req_arr),
+      .dfi_wrlvl_ack_i      (dfi_wrlvl_ack_arr),
+      .dfi_rdlvl_ack_i      (dfi_rdlvl_ack_arr),
+      .dfi_wrlvl_req_o      (dfi_wrlvl_req_arr),
+      .dfi_rdlvl_req_o      (dfi_rdlvl_req_arr),
+      .training_done_o      (training_done_arr),
+      .training_err_o       (training_err_arr),
+      .train_state_o        (train_state_arr)
   );
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : g_train_ack
+    if (!rst_ni) begin
+      dfi_wrlvl_ack_i <= 1'b0;
+      dfi_rdlvl_ack_i <= 1'b0;
+    end else begin
+      dfi_wrlvl_ack_i <= dfi_wrlvl_req_arr[0];
+      dfi_rdlvl_ack_i <= dfi_rdlvl_req_arr[0];
+    end
+  end
 
   assign pw_state_o = pw_state_arr[0];
 
@@ -384,7 +424,13 @@ module hbm4_ctrl_fpv_wrapper;
       .pwrdn_req_i         (pwrdn_req_i),
       .sref_req_i          (sref_req_i),
       .exit_req_i          (exit_req_i),
-      .temp_celsius_i      (temp_celsius_i)
+      .temp_celsius_i      (temp_celsius_i),
+      .wrlvl_req_i         (wrlvl_req_i),
+      .rdlvl_req_i         (rdlvl_req_i),
+      .dfi_wrlvl_req_o     (dfi_wrlvl_req_arr[0]),
+      .dfi_rdlvl_req_o     (dfi_rdlvl_req_arr[0]),
+      .dfi_wrlvl_ack_i     (dfi_wrlvl_ack_i),
+      .dfi_rdlvl_ack_i     (dfi_rdlvl_ack_i)
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_cyc_act
@@ -491,6 +537,40 @@ module hbm4_ctrl_fpv_wrapper;
       (dut.g_channel[0].u_chan.trefi_cycles_o == 16'd3900);
   endproperty
   P5F4_trefi_hot: assert property (p5_trefi_hot);
+
+  // P6.F1 — inhibit asserted whenever in WRLVL or RDLVL
+  property p6_inhibit_during_training;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (dut.g_channel[0].u_chan.u_training.train_state_o inside
+      {hbm4_ctrl_pkg::TRAIN_WRLVL, hbm4_ctrl_pkg::TRAIN_RDLVL}) |->
+    dut.g_channel[0].u_chan.u_training.inhibit_cmds_o;
+  endproperty
+  P6F1_inhibit_training: assert property (p6_inhibit_during_training);
+
+  // P6.F2 — training_err only after timeout (timer reached 0)
+  property p6_err_after_timeout;
+    @(posedge clk_i) disable iff (!rst_ni)
+    $rose(dut.g_channel[0].u_chan.u_training.training_err_o) |->
+      $past(dut.g_channel[0].u_chan.u_training.train_state_o, 1) inside
+        {hbm4_ctrl_pkg::TRAIN_WRLVL, hbm4_ctrl_pkg::TRAIN_RDLVL};
+  endproperty
+  P6F2_err_after_timeout: assert property (p6_err_after_timeout);
+
+  // P6.F3 — wrlvl_req and rdlvl_req never both asserted
+  property p6_no_simultaneous_req;
+    @(posedge clk_i) disable iff (!rst_ni)
+    !(dut.g_channel[0].u_chan.u_training.dfi_wrlvl_req_o &&
+      dut.g_channel[0].u_chan.u_training.dfi_rdlvl_req_o);
+  endproperty
+  P6F3_no_sim_req: assert property (p6_no_simultaneous_req);
+
+  // P6.F4 — done is a single-cycle pulse (not held)
+  property p6_done_pulse;
+    @(posedge clk_i) disable iff (!rst_ni)
+    dut.g_channel[0].u_chan.u_training.training_done_o |=>
+      !dut.g_channel[0].u_chan.u_training.training_done_o;
+  endproperty
+  P6F4_done_pulse: assert property (p6_done_pulse);
 
 endmodule : hbm4_ctrl_fpv_wrapper
 
