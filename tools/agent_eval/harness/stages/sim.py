@@ -69,7 +69,8 @@ def stage_sim(ctx: StageContext, simulator: str = "verilator") -> StageResult:
         ["make", "-C", str(dv_dir)],
         cwd=ctx.work,
         env=env,
-        timeout=1800,
+        # Verilator compile + full cocotb regression can exceed 30 min on WSL/C: or CI.
+        timeout=3600,
     )
     passed, total = _parse_results(results)
     n_case = (

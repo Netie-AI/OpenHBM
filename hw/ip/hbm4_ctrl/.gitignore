@@ -1,0 +1,6 @@
+# Copyright 2026 The Netie Open HBM Authors
+# SPDX-License-Identifier: Apache-2.0
+dv/sim_build/
+dv/results.xml
+dv/coverage.xml
+fpv/hbm4_ctrl_liveness/

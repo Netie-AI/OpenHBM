@@ -1,204 +1,232 @@
 // Copyright 2026 The Netie Open HBM Authors
 // SPDX-License-Identifier: Apache-2.0
+//
+// Top: AXI4 slave front-end + sixteen per-bank FSMs + round-robin scheduler.
 `default_nettype none
 `timescale 1ns/1ps
 
-// hbm4_ctrl -- top-level HBM4 controller (PHASE-1 SKELETON).
-//
-// 32 channels x 2 pseudo-channels per channel x 16 banks per pseudo-channel.
-// Front-end: per-channel AXI4 + per-controller APB CSR. Back-end: per-channel
-// DFI 5.x to hbm4_phy_shim.
-//
-// This Phase-1 skeleton instantiates a single bank machine per (channel,
-// pseudo-channel, bank) for elaboration purposes; the inner FSM stub
-// emits NOPs except for the smoke pattern. Full implementation (the
-// real scheduler / refresh weave / data path) lands in Phase 2 once
-// DRAMsim4 is co-running and addr_map / ecc / refresh_mgr are formally
-// proved.
-//
-// Cycle-by-cycle behaviour, scheduler happy path:
-//   c0: AXI request lands; addr_map_inst maps SA -> PA in 1 cycle.
-//   c1: Scheduler chooses a bank machine (round-robin within channel).
-//   c2: Bank machine emits ACT (or RD/WR if row already open).
-//   c2+tRCD..tRCD+CL: Read data appears on the DFI read bus.
-//   c2+CL+1..end of burst: Data flows back to the AXI port.
-
-import hbm4_ctrl_pkg::*;
-import addr_map_pkg::*;
-
 module hbm4_ctrl #(
-  parameter int unsigned NumCh         = NUM_CHANNELS,
-  parameter int unsigned NumPCh        = NUM_PSEUDO_CHANNELS,
-  parameter int unsigned NumBanks      = NUM_BANK_GROUPS * NUM_BANKS_PER_GROUP,
-  parameter speed_e      DefaultSpeed  = SPEED_8000
-)(
-  input  logic         clk_i,
-  input  logic         rst_ni,
+    parameter int unsigned P_BANK_GROUPS = hbm4_ctrl_pkg::BANK_GROUPS,
+    parameter int unsigned P_BANKS_PER_BG = hbm4_ctrl_pkg::BANKS_PER_BG,
+    parameter int unsigned P_ROW_W       = hbm4_ctrl_pkg::ROW_W,
+    parameter int unsigned P_COL_W       = hbm4_ctrl_pkg::COL_W,
+    parameter int unsigned P_T_RCD       = hbm4_ctrl_pkg::T_RCD,
+    parameter int unsigned P_T_RAS       = hbm4_ctrl_pkg::T_RAS,
+    parameter int unsigned P_T_RP        = hbm4_ctrl_pkg::T_RP,
+    parameter int unsigned P_T_RC        = hbm4_ctrl_pkg::T_RC,
+    parameter int unsigned P_AXI_ID_W    = hbm4_ctrl_pkg::AXI_ID_W,
+    parameter int unsigned P_AXI_ADDR_W = hbm4_ctrl_pkg::AXI_ADDR_W,
+    parameter int unsigned P_AXI_DATA_W = hbm4_ctrl_pkg::AXI_DATA_W
+) (
+    input logic clk_i,
+    input logic rst_ni,
 
-  // System-side AXI4 (one per channel) -- bundled struct, defined later.
-  // For Phase 1 we expose just request valid/ready + sa to keep the
-  // interface compilable until the real AXI types arrive from
-  // hw/vendor/pulp_common_cells/.
-  input  logic [NumCh-1:0]                 axi_aw_valid_i,
-  output logic [NumCh-1:0]                 axi_aw_ready_o,
-  input  logic [NumCh-1:0][addr_map_pkg::SaW-1:0] axi_aw_addr_i,
-  input  logic [NumCh-1:0]                 axi_ar_valid_i,
-  output logic [NumCh-1:0]                 axi_ar_ready_o,
-  input  logic [NumCh-1:0][addr_map_pkg::SaW-1:0] axi_ar_addr_i,
+    input  logic [P_AXI_ID_W-1:0]     awid_i,
+    input  logic [P_AXI_ADDR_W-1:0]   awaddr_i,
+    input  logic [7:0]                awlen_i,
+    input  logic [2:0]                awsize_i,
+    input  logic [1:0]                awburst_i,
+    input  logic                      awvalid_i,
+    output logic                      awready_o,
 
-  // PHY-side DFI (one per channel, packed into a struct in Phase 2).
-  output cmd_e        [NumCh-1:0][NumPCh-1:0] dfi_cmd_o,
-  output logic        [NumCh-1:0][NumPCh-1:0] dfi_cmd_valid_o,
-  output logic [16:0] [NumCh-1:0][NumPCh-1:0] dfi_row_o,
-  output logic [5:0]  [NumCh-1:0][NumPCh-1:0] dfi_col_o,
+    input  logic [P_AXI_DATA_W-1:0]    wdata_i,
+    input  logic [P_AXI_DATA_W/8-1:0] wstrb_i,
+    input  logic                       wlast_i,
+    input  logic                       wvalid_i,
+    output logic                       wready_o,
 
-  // APB CSR
-  input  logic         apb_psel_i,
-  input  logic         apb_penable_i,
-  input  logic         apb_pwrite_i,
-  input  logic [11:0]  apb_paddr_i,
-  input  logic [31:0]  apb_pwdata_i,
-  output logic [31:0]  apb_prdata_o,
-  output logic         apb_pready_o,
-  output logic         apb_pslverr_o
+    output logic [P_AXI_ID_W-1:0] bid_o,
+    output logic [1:0]            bresp_o,
+    output logic                  bvalid_o,
+    input  logic                  bready_i,
+
+    input  logic [P_AXI_ID_W-1:0]   arid_i,
+    input  logic [P_AXI_ADDR_W-1:0] araddr_i,
+    input  logic [7:0]              arlen_i,
+    input  logic [2:0]              arsize_i,
+    input  logic [1:0]              arburst_i,
+    input  logic                    arvalid_i,
+    output logic                    arready_o,
+
+    output logic [P_AXI_ID_W-1:0]   rid_o,
+    output logic [P_AXI_DATA_W-1:0] rdata_o,
+    output logic [1:0]              rresp_o,
+    output logic                    rlast_o,
+    output logic                    rvalid_o,
+    input  logic                    rready_i,
+
+    output logic                  cmd_valid_o,
+    output hbm4_ctrl_pkg::cmd_e  cmd_o,
+    output hbm4_ctrl_pkg::bank_addr_t cmd_bank_o,
+    output logic [P_ROW_W-1:0]   cmd_row_o,
+    output logic [P_COL_W-1:0]   cmd_col_o,
+    output logic                  drfm_req_o,
+    input  logic                  drfm_ack_i,
+    output hbm4_ctrl_pkg::bank_state_e fpv_bank0_state_o,
+    output logic [15:0]           fpv_bank0_ras_cnt_o
 );
 
-  // ---------------------------------------------------------------------------
-  // Address mapper (one instance, time-multiplexed across channels in Phase 1)
-  // ---------------------------------------------------------------------------
-  logic    [addr_map_pkg::SaW-1:0] map_sa;
-  pa_t                              map_pa;
-  logic                             map_req_v;
-  logic                             map_req_r;
-  logic                             map_rsp_v;
-  op_e                              map_rsp_op;
-  logic                             map_rsp_hit;
+  import hbm4_ctrl_pkg::*;
 
-  // Trivial round-robin pull from per-channel AXI AR queues. (Phase-1 stub.)
-  logic [$clog2(NumCh)-1:0] rr_q;
-  always_ff @(posedge clk_i or negedge rst_ni) begin : p_rr
-    if (!rst_ni) rr_q <= '0;
-    else         rr_q <= rr_q + ($clog2(NumCh))'(1);
-  end
+  localparam int unsigned NumB = P_BANK_GROUPS * P_BANKS_PER_BG;
 
-  always_comb begin : c_pull
-    map_req_v = axi_ar_valid_i[rr_q];
-    map_sa    = axi_ar_addr_i[rr_q];
-    for (int unsigned c = 0; c < NumCh; c++) begin
-      axi_ar_ready_o[c] = (c == int'(rr_q)) && map_req_r;
-      axi_aw_ready_o[c] = '0;
-    end
-  end
+  logic                  int_req_valid;
+  bank_addr_t           int_req_bank;
+  logic [P_ROW_W-1:0]   int_req_row;
+  logic [P_COL_W-1:0]   int_req_col;
+  logic                  int_req_we;
+  logic                  int_req_ready;
 
-  addr_map u_addr_map (
-    .clk_i,
-    .rst_ni,
-    .req_valid_i      (map_req_v),
-    .req_ready_o      (map_req_r),
-    .req_sa_i         (map_sa),
-    .req_op_i         (OP_READ),
-    .rsp_valid_o      (map_rsp_v),
-    .rsp_ready_i      (1'b1),
-    .rsp_pa_o         (map_pa),
-    .rsp_op_o         (map_rsp_op),
-    .rsp_region_hit_o (map_rsp_hit),
-    .cfg_we_i         (1'b0),
-    .cfg_idx_i        ('0),
-    .cfg_wdata_i      ('0),
-    .cfg_commit_i     (1'b0),
-    .cfg_default_mode_i (MODE_CH_STRIPED)
+  logic cmd_fire;
+  assign cmd_fire = cmd_valid_o;
+
+  hbm4_ctrl_axi4_slave #(
+      .P_AXI_ID_W(P_AXI_ID_W),
+      .P_AXI_ADDR_W(P_AXI_ADDR_W),
+      .P_AXI_DATA_W(P_AXI_DATA_W),
+      .P_ROW_W(P_ROW_W),
+      .P_COL_W(P_COL_W),
+      .P_BANK_GROUPS(P_BANK_GROUPS),
+      .P_BANKS_PER_BG(P_BANKS_PER_BG)
+  ) u_axi (
+      .clk_i              (clk_i),
+      .rst_ni             (rst_ni),
+      .awid_i             (awid_i),
+      .awaddr_i           (awaddr_i),
+      .awlen_i            (awlen_i),
+      .awsize_i           (awsize_i),
+      .awburst_i          (awburst_i),
+      .awvalid_i          (awvalid_i),
+      .awready_o          (awready_o),
+      .wdata_i            (wdata_i),
+      .wstrb_i            (wstrb_i),
+      .wlast_i            (wlast_i),
+      .wvalid_i           (wvalid_i),
+      .wready_o           (wready_o),
+      .bid_o              (bid_o),
+      .bresp_o            (bresp_o),
+      .bvalid_o           (bvalid_o),
+      .bready_i           (bready_i),
+      .arid_i             (arid_i),
+      .araddr_i           (araddr_i),
+      .arlen_i            (arlen_i),
+      .arsize_i           (arsize_i),
+      .arburst_i          (arburst_i),
+      .arvalid_i          (arvalid_i),
+      .arready_o          (arready_o),
+      .rid_o              (rid_o),
+      .rdata_o            (rdata_o),
+      .rresp_o            (rresp_o),
+      .rlast_o            (rlast_o),
+      .rvalid_o           (rvalid_o),
+      .rready_i           (rready_i),
+      .core_req_valid_o   (int_req_valid),
+      .core_req_bank_o    (int_req_bank),
+      .core_req_row_o     (int_req_row),
+      .core_req_col_o     (int_req_col),
+      .core_req_we_o      (int_req_we),
+      .core_req_ready_i   (int_req_ready),
+      .cmd_fire_i         (cmd_fire),
+      .cmd_i              (cmd_o),
+      .cmd_bank_i         (cmd_bank_o)
   );
 
-  // ---------------------------------------------------------------------------
-  // Bank machine grid (NumCh x NumPCh x NumBanks). Phase-1 skeleton only
-  // wires the (0,0,*) slot through; the rest are tied off.
-  // ---------------------------------------------------------------------------
-  cmd_e        bm_cmd        [NumBanks];
-  logic        bm_cmd_valid  [NumBanks];
-  logic [16:0] bm_cmd_row    [NumBanks];
-  logic [5:0]  bm_cmd_col    [NumBanks];
+  logic [NumB-1:0]                 b_req_ready;
+  logic [NumB-1:0]                 b_cmd_valid;
+  cmd_e [NumB-1:0]                 b_cmd;
+  row_t [NumB-1:0]                 b_cmd_row;
+  col_t [NumB-1:0]                 b_cmd_col;
+  logic [NumB-1:0]                 b_cmd_accept;
+  logic [NumB-1:0]                 b_refresh_req;
+  bank_state_e [NumB-1:0]          b_bank_state;
+  logic [15:0]                     b_ras_dbg[NumB];
 
-  // Phase-1: a static timing struct populated by the CSR block.
-  timing_t timing_q;
-  always_ff @(posedge clk_i or negedge rst_ni) begin : p_timing
+  logic [15:0]                     cyc_q;
+  logic                            drfm_arm_q;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : g_drfm_tim
     if (!rst_ni) begin
-      timing_q.tRCD     <= 8'd14;
-      timing_q.tRP      <= 8'd14;
-      timing_q.tRAS     <= 8'd28;
-      timing_q.tRC      <= 8'd42;
-      timing_q.tRFC_ab  <= 12'd200;
-      timing_q.tRFC_pb  <= 12'd80;
-      timing_q.tRFC_sb  <= 12'd120;
-      timing_q.tREFI    <= 16'd1950;
-      timing_q.tFAW     <= 8'd25;
-      timing_q.tRRD_S   <= 5'd4;
-      timing_q.tRRD_L   <= 5'd6;
-      timing_q.tCCD_S   <= 5'd8;
-      timing_q.tCCD_L   <= 5'd16;
-      timing_q.tWR      <= 8'd16;
-      timing_q.tWTR_S   <= 5'd4;
-      timing_q.tWTR_L   <= 5'd6;
-      timing_q.CL       <= 6'd24;
-      timing_q.CWL      <= 6'd20;
-    end
-  end
-
-  for (genvar b = 0; b < NumBanks; b++) begin : g_bank
-    hbm4_bank_machine u_bm (
-      .clk_i,
-      .rst_ni,
-      .timing_i        (timing_q),
-      .req_valid_i     (b == 0 ? map_rsp_v : 1'b0),
-      .req_ready_o     (),
-      .req_row_i       (map_pa.row),
-      .req_col_i       (map_pa.col),
-      .req_is_write_i  (1'b0),
-      .refresh_req_i   (1'b0),
-      .refresh_mode_i  (REF_AB),
-      .refresh_ack_o   (),
-      .cmd_o           (bm_cmd[b]),
-      .cmd_valid_o     (bm_cmd_valid[b]),
-      .cmd_row_o       (bm_cmd_row[b]),
-      .cmd_col_o       (bm_cmd_col[b]),
-      .state_o         ()
-    );
-  end
-
-  // ---------------------------------------------------------------------------
-  // DFI fan-out -- Phase-1 stub: drive (0,0,*) onto channel 0 / pCh 0,
-  // tie all others to NOP.
-  // ---------------------------------------------------------------------------
-  always_comb begin : c_dfi_fanout
-    for (int unsigned c = 0; c < NumCh; c++) begin
-      for (int unsigned p = 0; p < NumPCh; p++) begin
-        dfi_cmd_o      [c][p] = CMD_NOP;
-        dfi_cmd_valid_o[c][p] = 1'b0;
-        dfi_row_o      [c][p] = '0;
-        dfi_col_o      [c][p] = '0;
+      cyc_q      <= '0;
+      drfm_arm_q <= 1'b0;
+    end else begin
+      cyc_q <= cyc_q + 16'd1;
+      if (cyc_q == 16'd240) begin
+        drfm_arm_q <= 1'b1;
+      end
+      if (drfm_ack_i) begin
+        drfm_arm_q <= 1'b0;
       end
     end
-    // Single live slot (Phase-1 wiring placeholder).
-    dfi_cmd_o      [0][0] = bm_cmd[0];
-    dfi_cmd_valid_o[0][0] = bm_cmd_valid[0];
-    dfi_row_o      [0][0] = bm_cmd_row[0];
-    dfi_col_o      [0][0] = bm_cmd_col[0];
   end
 
-  // APB CSR placeholder. Reggen-generated decoder lands in Phase 2.
-  assign apb_pready_o   = 1'b1;
-  assign apb_pslverr_o  = 1'b0;
-  assign apb_prdata_o   = '0;
+  assign drfm_req_o = drfm_arm_q;
 
-  // ---------------------------------------------------------------------------
-  // SVA (Phase-1 placeholders -- the real timing-parameter assertions land
-  // with the real timer logic).
-  // ---------------------------------------------------------------------------
-`ifndef SYNTHESIS
-  // No two ACT commands on the same pseudo-channel in the same cycle.
-  a_dfi_cmd_one_per_pch : assert property (
-    @(posedge clk_i) disable iff (!rst_ni)
-    $countones({ dfi_cmd_valid_o[0][0] }) <= 1
+  always_comb begin : g_rf0
+    b_refresh_req = '0;
+    b_refresh_req[0] = drfm_ack_i;
+  end
+
+  genvar gi;
+  generate
+    for (gi = 0; gi < NumB; gi++) begin : g_bank
+      hbm4_ctrl_bank_fsm #(
+          .P_T_RCD (P_T_RCD),
+          .P_T_RAS (P_T_RAS),
+          .P_T_RP  (P_T_RP),
+          .P_T_RC  (P_T_RC),
+          .P_ROW_W (P_ROW_W),
+          .P_COL_W (P_COL_W)
+      ) u_bank (
+          .clk_i           (clk_i),
+          .rst_ni          (rst_ni),
+          .req_valid_i     (int_req_valid && (int_req_bank == bank_addr_t'(gi))),
+          .req_row_i       (int_req_row),
+          .req_col_i       (int_req_col),
+          .req_we_i        (int_req_we),
+          .req_ready_o     (b_req_ready[gi]),
+          .cmd_valid_o     (b_cmd_valid[gi]),
+          .cmd_o           (b_cmd[gi]),
+          .cmd_row_o       (b_cmd_row[gi]),
+          .cmd_col_o       (b_cmd_col[gi]),
+          .cmd_accepted_i  (b_cmd_accept[gi]),
+          .refresh_req_i   (b_refresh_req[gi]),
+          .refresh_ack_o   (),
+          .bank_state_o    (b_bank_state[gi]),
+          .dbg_ras_cnt_o   (b_ras_dbg[gi])
+      );
+    end
+  endgenerate
+
+  hbm4_ctrl_scheduler #(
+      .P_NUM_BANKS (NumB)
+  ) u_sched (
+      .clk_i               (clk_i),
+      .rst_ni              (rst_ni),
+      .bank_cmd_valid_i    (b_cmd_valid),
+      .bank_cmd_i          (b_cmd),
+      .bank_cmd_row_i      (b_cmd_row),
+      .bank_cmd_col_i      (b_cmd_col),
+      .cmd_valid_o         (cmd_valid_o),
+      .cmd_o               (cmd_o),
+      .cmd_bank_o          (cmd_bank_o),
+      .cmd_row_o           (cmd_row_o),
+      .cmd_col_o           (cmd_col_o),
+      .cmd_accepted_i      (cmd_valid_o),
+      .bank_cmd_accepted_o (b_cmd_accept)
   );
-`endif
+
+  always_comb begin : g_rr
+    int_req_ready = 1'b0;
+    for (int unsigned bi = 0; bi < NumB; bi++) begin
+      if (int_req_bank == bank_addr_t'(bi)) begin
+        int_req_ready = b_req_ready[bi];
+      end
+    end
+  end
+
+  assign fpv_bank0_state_o   = b_bank_state[0];
+  assign fpv_bank0_ras_cnt_o = b_ras_dbg[0];
 
 endmodule : hbm4_ctrl
+
+`default_nettype wire
