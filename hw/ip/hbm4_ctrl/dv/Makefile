@@ -6,7 +6,11 @@ TOPLEVEL_LANG ?= verilog
 TOPLEVEL = hbm4_ctrl
 MODULE   = test_hbm4_ctrl
 
-export PYTHONPATH := $(CURDIR)/tests$(if $(PYTHONPATH),:$(PYTHONPATH),)
+# Prevent venv PYTHONHOME from conflicting with oss-cad Python 3.11
+unexport PYTHONHOME
+unexport PYTHONPATH
+
+export PYTHONPATH := $(CURDIR)/tests:$(PYTHONPATH)
 export COCOTB_RESULTS_FILE := $(CURDIR)/results.xml
 export PYTHONUNBUFFERED := 1
 
@@ -31,6 +35,8 @@ EXTRA_ARGS += -Wno-fatal -GNUM_CHANNELS=$(NUM_CHANNELS) \
 CUSTOM_COMPILE_DEPS += $(CURDIR)/Makefile
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
+
+sim: export PYTHONPATH := $(CURDIR)/tests:$(PYTHONPATH)
 
 .PHONY: elab-multichan test-multichan
 
