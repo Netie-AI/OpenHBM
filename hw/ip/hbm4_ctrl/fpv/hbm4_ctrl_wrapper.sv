@@ -97,6 +97,7 @@ module hbm4_ctrl_fpv_wrapper;
   logic                  sref_req_i;
   logic                  exit_req_i;
   hbm4_ctrl_pkg::chan_pw_state_e pw_state_o;
+  logic [7:0]            temp_celsius_i;
 
   logic [15:0]         cyc_since_act;
 
@@ -124,6 +125,7 @@ module hbm4_ctrl_fpv_wrapper;
       pwrdn_req_i <= 1'b0;
       sref_req_i  <= 1'b0;
       exit_req_i  <= 1'b0;
+      temp_celsius_i <= 8'd65;
     end else begin
       awvalid_i  <= ~awvalid_i;
       awaddr_i   <= awaddr_i ^ Aaw'(32'h0000_0040);
@@ -211,6 +213,8 @@ module hbm4_ctrl_fpv_wrapper;
   logic                  sref_req_arr [0:0];
   logic                  exit_req_arr [0:0];
   hbm4_ctrl_pkg::chan_pw_state_e pw_state_arr [0:0];
+  logic [7:0]            temp_celsius_arr [0:0];
+  logic [15:0]           trefi_cycles_arr [0:0];
 
   assign dfi_wrdata_ack_i     = 1'b1;
   assign dfi_rddata_i         = '0;
@@ -240,6 +244,7 @@ module hbm4_ctrl_fpv_wrapper;
   assign pwrdn_req_arr[0] = pwrdn_req_i;
   assign sref_req_arr[0]  = sref_req_i;
   assign exit_req_arr[0]  = exit_req_i;
+  assign temp_celsius_arr[0] = temp_celsius_i;
 
   assign awready_o   = awready_arr[0];
   assign wready_o    = wready_arr[0];
@@ -357,7 +362,9 @@ module hbm4_ctrl_fpv_wrapper;
       .pwrdn_req_i          (pwrdn_req_arr),
       .sref_req_i           (sref_req_arr),
       .exit_req_i           (exit_req_arr),
-      .pw_state_o           (pw_state_arr)
+      .pw_state_o           (pw_state_arr),
+      .temp_celsius_i       (temp_celsius_arr),
+      .trefi_cycles_o       (trefi_cycles_arr)
   );
 
   assign pw_state_o = pw_state_arr[0];
@@ -376,7 +383,8 @@ module hbm4_ctrl_fpv_wrapper;
       .dfi_lp_ctrl_ack_i   (dfi_lp_ctrl_ack_i),
       .pwrdn_req_i         (pwrdn_req_i),
       .sref_req_i          (sref_req_i),
-      .exit_req_i          (exit_req_i)
+      .exit_req_i          (exit_req_i),
+      .temp_celsius_i      (temp_celsius_i)
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_cyc_act
@@ -452,6 +460,37 @@ module hbm4_ctrl_fpv_wrapper;
       ##[T_XSR:T_XSR+5] !dut.g_channel[0].u_chan.u_pwrdn.inhibit_cmds_o;
   endproperty
   P4F4_txsr: assert property (p4_txsr_respected);
+
+  // P5.F1 — HOT band only when temp > 83 (hysteresis low threshold)
+  property p5_hot_band_valid;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (dut.g_channel[0].u_chan.temp_band_o == hbm4_ctrl_pkg::TEMP_HOT) |->
+      (temp_celsius_i > 8'd83);
+  endproperty
+  P5F1_hot_valid: assert property (p5_hot_band_valid);
+
+  // P5.F2 — COLD band only when temp < 47 (hysteresis high threshold)
+  property p5_cold_band_valid;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (dut.g_channel[0].u_chan.temp_band_o == hbm4_ctrl_pkg::TEMP_COLD) |->
+      (temp_celsius_i < 8'd47);
+  endproperty
+  P5F2_cold_valid: assert property (p5_cold_band_valid);
+
+  // P5.F3 — trefi_cycles matches band
+  property p5_trefi_cold;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (dut.g_channel[0].u_chan.temp_band_o == hbm4_ctrl_pkg::TEMP_COLD) |->
+      (dut.g_channel[0].u_chan.trefi_cycles_o == 16'd15600);
+  endproperty
+  P5F3_trefi_cold: assert property (p5_trefi_cold);
+
+  property p5_trefi_hot;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (dut.g_channel[0].u_chan.temp_band_o == hbm4_ctrl_pkg::TEMP_HOT) |->
+      (dut.g_channel[0].u_chan.trefi_cycles_o == 16'd3900);
+  endproperty
+  P5F4_trefi_hot: assert property (p5_trefi_hot);
 
 endmodule : hbm4_ctrl_fpv_wrapper
 

@@ -95,7 +95,11 @@ module hbm4_ctrl_chan_top #(
     input  logic                                       pwrdn_req_i,
     input  logic                                       sref_req_i,
     input  logic                                       exit_req_i,
-    output hbm4_ctrl_pkg::chan_pw_state_e            pw_state_o
+    output hbm4_ctrl_pkg::chan_pw_state_e            pw_state_o,
+
+    input  logic [7:0]                                 temp_celsius_i,
+    output logic [15:0]                                trefi_cycles_o,
+    output hbm4_ctrl_pkg::temp_band_e                  temp_band_o
 );
 
   import hbm4_ctrl_pkg::*;
@@ -183,6 +187,19 @@ module hbm4_ctrl_chan_top #(
 
   logic [15:0]                     cyc_q;
   logic                            drfm_arm_q;
+  logic [15:0]                     trefi_cycles;
+  temp_band_e                      temp_band;
+
+  hbm4_ctrl_trefi_ctrl u_trefi_ctrl (
+      .clk_i          (clk_i),
+      .rst_ni         (rst_ni),
+      .temp_celsius_i (temp_celsius_i),
+      .trefi_cycles_o (trefi_cycles),
+      .temp_band_o    (temp_band)
+  );
+
+  assign trefi_cycles_o = trefi_cycles;
+  assign temp_band_o    = temp_band;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_drfm_tim
     if (!rst_ni) begin

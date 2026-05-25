@@ -21,7 +21,8 @@ module hbm4_ctrl_abs #(
     input logic                    dfi_lp_ctrl_ack_i,
     input logic                    pwrdn_req_i,
     input logic                    sref_req_i,
-    input logic                    exit_req_i
+    input logic                    exit_req_i,
+    input logic [7:0]              temp_celsius_i
 );
 
   assume property (@(posedge clk_i) disable iff (!rst_ni) !$isunknown(awvalid_i));
@@ -60,6 +61,10 @@ module hbm4_ctrl_abs #(
 
   assume property (@(posedge clk_i) disable iff (!rst_ni) !(pwrdn_req_i && exit_req_i));
   assume property (@(posedge clk_i) disable iff (!rst_ni) !(sref_req_i && exit_req_i));
+
+  // Constrain temperature to realistic sensor range
+  assume property (@(posedge clk_i) disable iff (!rst_ni)
+      (temp_celsius_i >= 8'd0) && (temp_celsius_i <= 8'd125));
 
 endmodule : hbm4_ctrl_abs
 

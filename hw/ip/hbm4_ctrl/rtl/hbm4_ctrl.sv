@@ -95,7 +95,10 @@ module hbm4_ctrl #(
     input  logic pwrdn_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     input  logic sref_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     input  logic exit_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
-    output hbm4_ctrl_pkg::chan_pw_state_e pw_state_o [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::chan_pw_state_e pw_state_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    input  logic [7:0] temp_celsius_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [15:0] trefi_cycles_o [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
 );
 
   import hbm4_ctrl_pkg::*;
@@ -188,7 +191,10 @@ module hbm4_ctrl #(
           .pwrdn_req_i          (pwrdn_req_i[ch]),
           .sref_req_i           (sref_req_i[ch]),
           .exit_req_i           (exit_req_i[ch]),
-          .pw_state_o           (pw_state_o[ch])
+          .pw_state_o           (pw_state_o[ch]),
+          .temp_celsius_i       (temp_celsius_i[ch]),
+          .trefi_cycles_o       (trefi_cycles_o[ch]),
+          .temp_band_o          ()
       );
     end
   endgenerate

@@ -60,4 +60,17 @@ package hbm4_ctrl_pkg;
   localparam int unsigned T_XSR   = 200;  // verilog_lint: waive parameter-name-style -- JEDEC tXSR
   localparam int unsigned T_XPDLL = 10;   // verilog_lint: waive parameter-name-style -- JEDEC tXPDLL
 
+  // P5 — Temperature-aware refresh
+  typedef enum logic [1:0] {
+    TEMP_COLD   = 2'd0,   // < 45°C  → 2× tREFI
+    TEMP_NORMAL = 2'd1,   // 45–85°C → 1× tREFI
+    TEMP_HOT    = 2'd2    // > 85°C  → 0.5× tREFI
+  } temp_band_e;
+
+  // Base tREFI = 7800 ns; at 1 GHz = 7800 cycles
+  localparam int unsigned TREFI_BASE = 7800;  // verilog_lint: waive parameter-name-style -- JEDEC tREFI
+  localparam int unsigned TREFI_COLD = 15600;  // verilog_lint: waive parameter-name-style -- 2× base
+  localparam int unsigned TREFI_HOT  = 3900;   // verilog_lint: waive parameter-name-style -- 0.5× base
+  localparam int unsigned TEMP_HYST  = 2;      // verilog_lint: waive parameter-name-style -- °C guard
+
 endpackage : hbm4_ctrl_pkg

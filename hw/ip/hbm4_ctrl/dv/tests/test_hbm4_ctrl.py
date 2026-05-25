@@ -98,6 +98,7 @@ def _drive_all_inputs_idle(dut) -> None:
         _port(dut, "pwrdn_req_i", ch).value = 0
         _port(dut, "sref_req_i", ch).value = 0
         _port(dut, "exit_req_i", ch).value = 0
+        _port(dut, "temp_celsius_i", ch).value = 65
 
 
 async def _tb_begin(dut, watchdog_cycles: int = 2000) -> None:
@@ -785,3 +786,106 @@ async def test_no_cmd_during_pd(dut) -> None:
         assert int(_dfi(dut, "dfi_cs_n_o", 0).value) == 1, "DFI command issued while in power-down"
     _port(dut, "awvalid_i", 0).value = 0
     _touch("pwrdn", "no_cmd_pd")
+
+
+@cocotb.test()
+async def test_trefi_normal_band(dut) -> None:
+    """At 65°C, trefi_cycles must equal TREFI_BASE=7800."""
+    clock = Clock(dut.clk_i, 10, unit="ns")
+    cocotb.start_soon(clock.start())
+    await _tb_begin(dut)
+    _port(dut, "temp_celsius_i", 0).value = 65
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    val = _port(dut, "trefi_cycles_o", 0).value
+    assert int(val) == 7800, f"Expected 7800, got {int(val)}"
+
+
+@cocotb.test()
+async def test_trefi_hot_band(dut) -> None:
+    """At 90°C, trefi_cycles must equal TREFI_HOT=3900."""
+    clock = Clock(dut.clk_i, 10, unit="ns")
+    cocotb.start_soon(clock.start())
+    await _tb_begin(dut)
+    _port(dut, "temp_celsius_i", 0).value = 90
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    val = _port(dut, "trefi_cycles_o", 0).value
+    assert int(val) == 3900, f"Expected 3900, got {int(val)}"
+
+
+@cocotb.test()
+async def test_trefi_cold_band(dut) -> None:
+    """At 30°C, trefi_cycles must equal TREFI_COLD=15600."""
+    clock = Clock(dut.clk_i, 10, unit="ns")
+    cocotb.start_soon(clock.start())
+    await _tb_begin(dut)
+    _port(dut, "temp_celsius_i", 0).value = 30
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    val = _port(dut, "trefi_cycles_o", 0).value
+    assert int(val) == 15600, f"Expected 15600, got {int(val)}"
+
+
+@cocotb.test()
+async def test_trefi_hysteresis_cold_to_normal(dut) -> None:
+    """
+    Enter COLD band at 30°C.
+    At 46°C (below COLD→NORMAL threshold of 47), must stay COLD.
+    At 47°C, must transition to NORMAL.
+    """
+    clock = Clock(dut.clk_i, 10, unit="ns")
+    cocotb.start_soon(clock.start())
+    await _tb_begin(dut)
+
+    _port(dut, "temp_celsius_i", 0).value = 30
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    _port(dut, "temp_celsius_i", 0).value = 46
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    val = _port(dut, "trefi_cycles_o", 0).value
+    assert int(val) == 15600, f"Should stay COLD at 46°C, trefi={int(val)}"
+
+    _port(dut, "temp_celsius_i", 0).value = 47
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    val = _port(dut, "trefi_cycles_o", 0).value
+    assert int(val) == 7800, f"Should be NORMAL at 47°C, trefi={int(val)}"
+
+
+@cocotb.test()
+async def test_trefi_hysteresis_hot_to_normal(dut) -> None:
+    """
+    Enter HOT band at 90°C.
+    At 84°C (above HOT→NORMAL threshold of 83), must stay HOT.
+    At 83°C, must transition to NORMAL.
+    """
+    clock = Clock(dut.clk_i, 10, unit="ns")
+    cocotb.start_soon(clock.start())
+    await _tb_begin(dut)
+
+    _port(dut, "temp_celsius_i", 0).value = 90
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    _port(dut, "temp_celsius_i", 0).value = 84
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    val = _port(dut, "trefi_cycles_o", 0).value
+    assert int(val) == 3900, f"Should stay HOT at 84°C, trefi={int(val)}"
+
+    _port(dut, "temp_celsius_i", 0).value = 83
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    val = _port(dut, "trefi_cycles_o", 0).value
+    assert int(val) == 7800, f"Should be NORMAL at 83°C, trefi={int(val)}"
