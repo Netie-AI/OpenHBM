@@ -16,13 +16,26 @@ VERILOG_SOURCES = \
   $(CURDIR)/../rtl/hbm4_ctrl_axi4_slave.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_bank_fsm.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_scheduler.sv \
+  $(CURDIR)/../rtl/hbm4_ctrl_chan_top.sv \
   $(CURDIR)/../rtl/hbm4_ctrl.sv
 
 COMPILE_ARGS += --threads 20
-EXTRA_ARGS += -Wno-fatal \
-  -GP_BANK_GROUPS=4 -GP_BANKS_PER_BG=4 -GP_ROW_W=15 -GP_COL_W=6 \
-  -GP_T_RCD=4 -GP_T_RAS=10 -GP_T_RP=4 -GP_T_RC=14
+NUM_CHANNELS ?= 1
+export NUM_CHANNELS
+EXTRA_ARGS += -Wno-fatal -GNUM_CHANNELS=$(NUM_CHANNELS) \
+  -GBANK_GROUPS=4 -GBANKS_PER_BG=4 -GROW_W=15 -GCOL_W=6 \
+  -GT_RCD=4 -GT_RAS=10 -GT_RP=4 -GT_RC=14
 
 CUSTOM_COMPILE_DEPS += $(CURDIR)/Makefile
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
+
+.PHONY: elab-multichan test-multichan
+
+elab-multichan:
+	verilator --lint-only -sv -Wno-fatal -GNUM_CHANNELS=4 \
+	  $(VERILOG_SOURCES) 2>&1 | grep -E "Error|Warning" | head -20
+
+test-multichan:
+	rm -rf sim_build
+	$(MAKE) SIM=verilator NUM_CHANNELS=4 COCOTB_TEST_FILTER=test_multichan

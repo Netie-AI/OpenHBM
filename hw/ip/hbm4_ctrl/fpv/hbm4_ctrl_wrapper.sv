@@ -106,46 +106,123 @@ module hbm4_ctrl_fpv_wrapper;
   end
 `endif
 
-  hbm4_ctrl dut (
+  logic [Aiw-1:0]        awid_arr [0:0];
+  logic [Aaw-1:0]        awaddr_arr [0:0];
+  logic [7:0]            awlen_arr [0:0];
+  logic [2:0]            awsize_arr [0:0];
+  logic [1:0]            awburst_arr [0:0];
+  logic                  awvalid_arr [0:0];
+  logic                  awready_arr [0:0];
+  logic [Adw-1:0]        wdata_arr [0:0];
+  logic [Adw/8-1:0]      wstrb_arr [0:0];
+  logic                  wlast_arr [0:0];
+  logic                  wvalid_arr [0:0];
+  logic                  wready_arr [0:0];
+  logic [Aiw-1:0]        bid_arr [0:0];
+  logic [1:0]            bresp_arr [0:0];
+  logic                  bvalid_arr [0:0];
+  logic                  bready_arr [0:0];
+  logic [Aiw-1:0]        arid_arr [0:0];
+  logic [Aaw-1:0]        araddr_arr [0:0];
+  logic [7:0]            arlen_arr [0:0];
+  logic [2:0]            arsize_arr [0:0];
+  logic [1:0]            arburst_arr [0:0];
+  logic                  arvalid_arr [0:0];
+  logic                  arready_arr [0:0];
+  logic [Aiw-1:0]        rid_arr [0:0];
+  logic [Adw-1:0]        rdata_arr [0:0];
+  logic [1:0]            rresp_arr [0:0];
+  logic                  rlast_arr [0:0];
+  logic                  rvalid_arr [0:0];
+  logic                  rready_arr [0:0];
+  logic                  cmd_valid_arr [0:0];
+  cmd_e                  cmd_arr [0:0];
+  bank_addr_t            cmd_bank_arr [0:0];
+  logic [ROW_W-1:0]     cmd_row_arr [0:0];
+  logic [COL_W-1:0]     cmd_col_arr [0:0];
+  logic                  drfm_req_arr [0:0];
+  logic                  drfm_ack_arr [0:0];
+
+  assign awid_arr[0]     = awid_i;
+  assign awaddr_arr[0]   = awaddr_i;
+  assign awlen_arr[0]    = awlen_i;
+  assign awsize_arr[0]   = awsize_i;
+  assign awburst_arr[0]  = awburst_i;
+  assign awvalid_arr[0]  = awvalid_i;
+  assign wdata_arr[0]    = wdata_i;
+  assign wstrb_arr[0]    = wstrb_i;
+  assign wlast_arr[0]    = wlast_i;
+  assign wvalid_arr[0]   = wvalid_i;
+  assign bready_arr[0]   = bready_i;
+  assign arid_arr[0]     = arid_i;
+  assign araddr_arr[0]  = araddr_i;
+  assign arlen_arr[0]    = arlen_i;
+  assign arsize_arr[0]  = arsize_i;
+  assign arburst_arr[0] = arburst_i;
+  assign arvalid_arr[0] = arvalid_i;
+  assign rready_arr[0]   = rready_i;
+  assign drfm_ack_arr[0] = drfm_ack_i;
+
+  assign awready_o   = awready_arr[0];
+  assign wready_o    = wready_arr[0];
+  assign bid_o       = bid_arr[0];
+  assign bresp_o     = bresp_arr[0];
+  assign bvalid_o    = bvalid_arr[0];
+  assign arready_o   = arready_arr[0];
+  assign rid_o       = rid_arr[0];
+  assign rdata_o     = rdata_arr[0];
+  assign rresp_o     = rresp_arr[0];
+  assign rlast_o     = rlast_arr[0];
+  assign rvalid_o    = rvalid_arr[0];
+  assign cmd_valid_o = cmd_valid_arr[0];
+  assign cmd_o       = cmd_arr[0];
+  assign cmd_bank_o  = cmd_bank_arr[0];
+  assign cmd_row_o   = cmd_row_arr[0];
+  assign cmd_col_o   = cmd_col_arr[0];
+  assign drfm_req_o  = drfm_req_arr[0];
+
+  hbm4_ctrl #(
+      .NUM_CHANNELS(1)
+  ) dut (
       .clk_i              (clk_i),
       .rst_ni             (rst_ni),
-      .awid_i             (awid_i),
-      .awaddr_i           (awaddr_i),
-      .awlen_i            (awlen_i),
-      .awsize_i           (awsize_i),
-      .awburst_i          (awburst_i),
-      .awvalid_i          (awvalid_i),
-      .awready_o          (awready_o),
-      .wdata_i            (wdata_i),
-      .wstrb_i            (wstrb_i),
-      .wlast_i            (wlast_i),
-      .wvalid_i           (wvalid_i),
-      .wready_o           (wready_o),
-      .bid_o              (bid_o),
-      .bresp_o            (bresp_o),
-      .bvalid_o           (bvalid_o),
-      .bready_i           (bready_i),
-      .arid_i             (arid_i),
-      .araddr_i           (araddr_i),
-      .arlen_i            (arlen_i),
-      .arsize_i           (arsize_i),
-      .arburst_i          (arburst_i),
-      .arvalid_i          (arvalid_i),
-      .arready_o          (arready_o),
-      .rid_o              (rid_o),
-      .rdata_o            (rdata_o),
-      .rresp_o            (rresp_o),
-      .rlast_o            (rlast_o),
-      .rvalid_o           (rvalid_o),
-      .rready_i           (rready_i),
-      .cmd_valid_o        (cmd_valid_o),
-      .cmd_o              (cmd_o),
-      .cmd_bank_o         (cmd_bank_o),
-      .cmd_row_o          (cmd_row_o),
-      .cmd_col_o          (cmd_col_o),
-      .drfm_req_o         (drfm_req_o),
-      .drfm_ack_i         (drfm_ack_i),
-      .fpv_bank0_state_o (fpv_bank0_state_o),
+      .awid_i             (awid_arr),
+      .awaddr_i           (awaddr_arr),
+      .awlen_i            (awlen_arr),
+      .awsize_i           (awsize_arr),
+      .awburst_i          (awburst_arr),
+      .awvalid_i          (awvalid_arr),
+      .awready_o          (awready_arr),
+      .wdata_i            (wdata_arr),
+      .wstrb_i            (wstrb_arr),
+      .wlast_i            (wlast_arr),
+      .wvalid_i           (wvalid_arr),
+      .wready_o           (wready_arr),
+      .bid_o              (bid_arr),
+      .bresp_o            (bresp_arr),
+      .bvalid_o           (bvalid_arr),
+      .bready_i           (bready_arr),
+      .arid_i             (arid_arr),
+      .araddr_i           (araddr_arr),
+      .arlen_i            (arlen_arr),
+      .arsize_i           (arsize_arr),
+      .arburst_i          (arburst_arr),
+      .arvalid_i          (arvalid_arr),
+      .arready_o          (arready_arr),
+      .rid_o              (rid_arr),
+      .rdata_o            (rdata_arr),
+      .rresp_o            (rresp_arr),
+      .rlast_o            (rlast_arr),
+      .rvalid_o           (rvalid_arr),
+      .rready_i           (rready_arr),
+      .cmd_valid_o        (cmd_valid_arr),
+      .cmd_o              (cmd_arr),
+      .cmd_bank_o         (cmd_bank_arr),
+      .cmd_row_o          (cmd_row_arr),
+      .cmd_col_o          (cmd_col_arr),
+      .drfm_req_o         (drfm_req_arr),
+      .drfm_ack_i         (drfm_ack_arr),
+      .fpv_bank0_state_o  (fpv_bank0_state_o),
       .fpv_bank0_ras_cnt_o(fpv_bank0_ras_cnt_o)
   );
 

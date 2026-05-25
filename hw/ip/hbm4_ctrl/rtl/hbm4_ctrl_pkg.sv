@@ -21,6 +21,12 @@ package hbm4_ctrl_pkg;
   parameter int unsigned AXI_ADDR_W = 32;
   parameter int unsigned AXI_DATA_W  = 64;
 
+  // Phase 2: pseudo-channel scale-out (1..16)
+  parameter int unsigned NUM_CHANNELS  = 4;
+  parameter int unsigned CHAN_ID_W     = $clog2(NUM_CHANNELS > 1 ? NUM_CHANNELS : 2);
+
+  typedef logic [CHAN_ID_W-1:0] chan_id_t;
+
   typedef enum logic [2:0] {
     IDLE_CMD = 3'd0,
     ACT      = 3'd1,

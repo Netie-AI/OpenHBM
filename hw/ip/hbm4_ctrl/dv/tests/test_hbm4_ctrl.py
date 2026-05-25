@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -15,7 +16,20 @@ from cocotb.triggers import ReadOnly, RisingEdge, Timer
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "env"))
 from hbm4_ctrl_ref import Cmd, Hbm4CtrlRef  # noqa: E402
 
+NUM_CH = int(os.environ.get("NUM_CHANNELS", "1"))
+
 COV: dict[str, dict[str, int]] = {}
+
+
+def _port(dut, name: str, ch: int = 0):
+    """Per-channel slice of unpacked-array top ports."""
+    sig = getattr(dut, name)
+    if NUM_CH == 1:
+        try:
+            return sig[0]
+        except TypeError:
+            return sig
+    return sig[ch]
 
 
 def _touch(cp: str, bn: str) -> None:
@@ -49,25 +63,26 @@ BURST_INCR = 1
 
 def _drive_all_inputs_idle(dut) -> None:
     """Drive every top-level input to a deterministic idle value before reset release."""
-    dut.awid_i.value = 0
-    dut.awaddr_i.value = 0
-    dut.awlen_i.value = 0
-    dut.awsize_i.value = 0
-    dut.awburst_i.value = 0
-    dut.awvalid_i.value = 0
-    dut.wdata_i.value = 0
-    dut.wstrb_i.value = 0
-    dut.wlast_i.value = 0
-    dut.wvalid_i.value = 0
-    dut.bready_i.value = 0
-    dut.arid_i.value = 0
-    dut.araddr_i.value = 0
-    dut.arlen_i.value = 0
-    dut.arsize_i.value = 0
-    dut.arburst_i.value = 0
-    dut.arvalid_i.value = 0
-    dut.rready_i.value = 0
-    dut.drfm_ack_i.value = 0
+    for ch in range(NUM_CH):
+        _port(dut, "awid_i", ch).value = 0
+        _port(dut, "awaddr_i", ch).value = 0
+        _port(dut, "awlen_i", ch).value = 0
+        _port(dut, "awsize_i", ch).value = 0
+        _port(dut, "awburst_i", ch).value = 0
+        _port(dut, "awvalid_i", ch).value = 0
+        _port(dut, "wdata_i", ch).value = 0
+        _port(dut, "wstrb_i", ch).value = 0
+        _port(dut, "wlast_i", ch).value = 0
+        _port(dut, "wvalid_i", ch).value = 0
+        _port(dut, "bready_i", ch).value = 0
+        _port(dut, "arid_i", ch).value = 0
+        _port(dut, "araddr_i", ch).value = 0
+        _port(dut, "arlen_i", ch).value = 0
+        _port(dut, "arsize_i", ch).value = 0
+        _port(dut, "arburst_i", ch).value = 0
+        _port(dut, "arvalid_i", ch).value = 0
+        _port(dut, "rready_i", ch).value = 0
+        _port(dut, "drfm_ack_i", ch).value = 0
 
 
 async def _tb_begin(dut, watchdog_cycles: int = 2000) -> None:
@@ -83,11 +98,12 @@ async def _tb_begin(dut, watchdog_cycles: int = 2000) -> None:
     cocotb.start_soon(timeout_task())
 
     dut.rst_ni.value = 0
-    dut.awvalid_i.value = 0
-    dut.wvalid_i.value = 0
-    dut.arvalid_i.value = 0
-    dut.bready_i.value = 0
-    dut.rready_i.value = 0
+    for ch in range(NUM_CH):
+        _port(dut, "awvalid_i", ch).value = 0
+        _port(dut, "wvalid_i", ch).value = 0
+        _port(dut, "arvalid_i", ch).value = 0
+        _port(dut, "bready_i", ch).value = 0
+        _port(dut, "rready_i", ch).value = 0
     _drive_all_inputs_idle(dut)
     for _ in range(5):
         await RisingEdge(dut.clk_i)
@@ -96,76 +112,78 @@ async def _tb_begin(dut, watchdog_cycles: int = 2000) -> None:
 
 
 async def _axi_write_single(
-    dut, *, bank: int, row: int, col: int, axid: int = 0
+    dut, *, bank: int, row: int, col: int, axid: int = 0, ch: int = 0
 ) -> None:
     addr = axi_pack_addr(bank, row, col)
-    dut.awid_i.value = axid
-    dut.awaddr_i.value = addr
-    dut.awlen_i.value = 0
-    dut.awsize_i.value = 3
-    dut.awburst_i.value = BURST_INCR
-    dut.awvalid_i.value = 1
+    _port(dut, "awid_i", ch).value = axid
+    _port(dut, "awaddr_i", ch).value = addr
+    _port(dut, "awlen_i", ch).value = 0
+    _port(dut, "awsize_i", ch).value = 3
+    _port(dut, "awburst_i", ch).value = BURST_INCR
+    _port(dut, "awvalid_i", ch).value = 1
     while True:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.awready_o.value):
+        if int(_port(dut, "awready_o", ch).value):
             break
-    dut.awvalid_i.value = 0
+    _port(dut, "awvalid_i", ch).value = 0
 
-    dut.wdata_i.value = 0
-    dut.wstrb_i.value = 0xFF
-    dut.wlast_i.value = 1
-    dut.wvalid_i.value = 1
+    _port(dut, "wdata_i", ch).value = 0
+    _port(dut, "wstrb_i", ch).value = 0xFF
+    _port(dut, "wlast_i", ch).value = 1
+    _port(dut, "wvalid_i", ch).value = 1
     while True:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.wready_o.value) and int(dut.wvalid_i.value):
+        if int(_port(dut, "wready_o", ch).value) and int(_port(dut, "wvalid_i", ch).value):
             break
     await RisingEdge(dut.clk_i)
     await ReadOnly()
     await Timer(1, unit="ps")
-    dut.wvalid_i.value = 0
+    _port(dut, "wvalid_i", ch).value = 0
 
-    dut.bready_i.value = 1
+    _port(dut, "bready_i", ch).value = 1
     while True:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.bvalid_o.value):
-            assert int(dut.bresp_o.value) == 0
-            assert int(dut.bid_o.value) == axid
+        if int(_port(dut, "bvalid_o", ch).value):
+            assert int(_port(dut, "bresp_o", ch).value) == 0
+            assert int(_port(dut, "bid_o", ch).value) == axid
             break
 
 
-async def _axi_read_single(dut, *, bank: int, row: int, col: int, axid: int = 0) -> int:
+async def _axi_read_single(
+    dut, *, bank: int, row: int, col: int, axid: int = 0, ch: int = 0
+) -> int:
     addr = axi_pack_addr(bank, row, col)
-    dut.arid_i.value = axid
-    dut.araddr_i.value = addr
-    dut.arlen_i.value = 0
-    dut.arsize_i.value = 3
-    dut.arburst_i.value = BURST_INCR
-    dut.arvalid_i.value = 1
+    _port(dut, "arid_i", ch).value = axid
+    _port(dut, "araddr_i", ch).value = addr
+    _port(dut, "arlen_i", ch).value = 0
+    _port(dut, "arsize_i", ch).value = 3
+    _port(dut, "arburst_i", ch).value = BURST_INCR
+    _port(dut, "arvalid_i", ch).value = 1
     while True:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.arready_o.value):
+        if int(_port(dut, "arready_o", ch).value):
             break
-    dut.arvalid_i.value = 0
+    _port(dut, "arvalid_i", ch).value = 0
 
-    dut.rready_i.value = 1
+    _port(dut, "rready_i", ch).value = 1
     rdata = 0
     while True:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.rvalid_o.value):
-            assert int(dut.rresp_o.value) == 0
-            assert int(dut.rid_o.value) == axid
-            assert int(dut.rlast_o.value) == 1
-            rdata = int(dut.rdata_o.value)
+        if int(_port(dut, "rvalid_o", ch).value):
+            assert int(_port(dut, "rresp_o", ch).value) == 0
+            assert int(_port(dut, "rid_o", ch).value) == axid
+            assert int(_port(dut, "rlast_o", ch).value) == 1
+            rdata = int(_port(dut, "rdata_o", ch).value)
             break
     return rdata
 
@@ -183,8 +201,8 @@ async def test_single_rw_no_conflict(dut) -> None:
             await RisingEdge(dut.clk_i)
             await ReadOnly()
             await Timer(1, unit="ps")
-            if int(dut.cmd_valid_o.value) and int(dut.cmd_bank_o.value) == bank:
-                cmds.append(int(dut.cmd_o.value))
+            if int(_port(dut, "cmd_valid_o").value) and int(_port(dut, "cmd_bank_o").value) == bank:
+                cmds.append(int(_port(dut, "cmd_o").value))
 
     collector = cocotb.start_soon(collect_cmds())
     await _axi_read_single(dut, bank=bank, row=row, col=0)
@@ -213,8 +231,8 @@ async def test_timing_t_rcd(dut) -> None:
             await RisingEdge(dut.clk_i)
             await ReadOnly()
             await Timer(1, unit="ps")
-            if int(dut.cmd_valid_o.value) and int(dut.cmd_bank_o.value) == bank:
-                cmd = int(dut.cmd_o.value)
+            if int(_port(dut, "cmd_valid_o").value) and int(_port(dut, "cmd_bank_o").value) == bank:
+                cmd = int(_port(dut, "cmd_o").value)
                 if cmd == int(Cmd.ACT):
                     act_c = cyc
                     rd_c = None
@@ -239,8 +257,8 @@ async def test_bank_interleave(dut) -> None:
             await RisingEdge(dut.clk_i)
             await ReadOnly()
             await Timer(1, unit="ps")
-            if int(dut.cmd_valid_o.value) and int(dut.cmd_o.value) == int(Cmd.RD):
-                got[int(dut.cmd_bank_o.value)] = True
+            if int(_port(dut, "cmd_valid_o").value) and int(_port(dut, "cmd_o").value) == int(Cmd.RD):
+                got[int(_port(dut, "cmd_bank_o").value)] = True
 
     watcher = cocotb.start_soon(watch_rd())
     for i in range(20):
@@ -262,11 +280,11 @@ async def test_refresh_handshake(dut) -> None:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.drfm_req_o.value):
-            dut.drfm_ack_i.value = 1
+        if int(_port(dut, "drfm_req_o").value):
+            _port(dut, "drfm_ack_i").value = 1
         else:
-            dut.drfm_ack_i.value = 0
-        if int(dut.cmd_valid_o.value) and int(dut.cmd_o.value) == int(Cmd.REF):
+            _port(dut, "drfm_ack_i").value = 0
+        if int(_port(dut, "cmd_valid_o").value) and int(_port(dut, "cmd_o").value) == int(Cmd.REF):
             saw_ref = True
             break
     assert saw_ref, "REF not observed after DRFM handshake"
@@ -285,12 +303,12 @@ async def test_row_conflict(dut) -> None:
             await RisingEdge(dut.clk_i)
             await ReadOnly()
             await Timer(1, unit="ps")
-            if int(dut.cmd_valid_o.value):
+            if int(_port(dut, "cmd_valid_o").value):
                 ref.record(
-                    int(dut.cmd_o.value),
-                    int(dut.cmd_bank_o.value),
-                    int(dut.cmd_row_o.value),
-                    int(dut.cmd_col_o.value),
+                    int(_port(dut, "cmd_o").value),
+                    int(_port(dut, "cmd_bank_o").value),
+                    int(_port(dut, "cmd_row_o").value),
+                    int(_port(dut, "cmd_col_o").value),
                 )
 
     sampler = cocotb.start_soon(sample_cmds())
@@ -314,34 +332,34 @@ async def test_axi4_single_write(dut) -> None:
 async def test_axi4_wrap_decerr(dut) -> None:
     await _tb_begin(dut)
     addr = axi_pack_addr(0, 1, 0)
-    dut.awid_i.value = 2
-    dut.awaddr_i.value = addr
-    dut.awlen_i.value = 0
-    dut.awsize_i.value = 3
-    dut.awburst_i.value = 2  # WRAP
-    dut.awvalid_i.value = 1
+    _port(dut, "awid_i").value = 2
+    _port(dut, "awaddr_i").value = addr
+    _port(dut, "awlen_i").value = 0
+    _port(dut, "awsize_i").value = 3
+    _port(dut, "awburst_i").value = 2  # WRAP
+    _port(dut, "awvalid_i").value = 1
     while True:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.awready_o.value):
+        if int(_port(dut, "awready_o").value):
             break
-    dut.awvalid_i.value = 0
-    dut.wdata_i.value = 0
-    dut.wstrb_i.value = 0xFF
-    dut.wlast_i.value = 1
-    dut.wvalid_i.value = 1
-    dut.bready_i.value = 1
+    _port(dut, "awvalid_i").value = 0
+    _port(dut, "wdata_i").value = 0
+    _port(dut, "wstrb_i").value = 0xFF
+    _port(dut, "wlast_i").value = 1
+    _port(dut, "wvalid_i").value = 1
+    _port(dut, "bready_i").value = 1
     for _ in range(50):
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.bvalid_o.value):
-            assert int(dut.bresp_o.value) == 3
+        if int(_port(dut, "bvalid_o").value):
+            assert int(_port(dut, "bresp_o").value) == 3
             break
     else:
         assert False, "bvalid_o never asserted for WRAP DECERR"
-    dut.wvalid_i.value = 0
+    _port(dut, "wvalid_i").value = 0
     await RisingEdge(dut.clk_i)
     _touch("axi", "wrap_decerr")
     _write_coverage()
@@ -351,60 +369,127 @@ async def test_axi4_wrap_decerr(dut) -> None:
 async def test_axi4_backpressure(dut) -> None:
     await _tb_begin(dut, watchdog_cycles=3000)
     addr = axi_pack_addr(1, 4, 0)
-    dut.awid_i.value = 0
-    dut.awaddr_i.value = addr
-    dut.awlen_i.value = 0
-    dut.awsize_i.value = 3
-    dut.awburst_i.value = BURST_INCR
-    dut.awvalid_i.value = 1
+    _port(dut, "awid_i").value = 0
+    _port(dut, "awaddr_i").value = addr
+    _port(dut, "awlen_i").value = 0
+    _port(dut, "awsize_i").value = 3
+    _port(dut, "awburst_i").value = BURST_INCR
+    _port(dut, "awvalid_i").value = 1
     while True:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.awready_o.value):
+        if int(_port(dut, "awready_o").value):
             break
-    dut.awvalid_i.value = 0
-    dut.wdata_i.value = 0
-    dut.wstrb_i.value = 0xFF
-    dut.wlast_i.value = 1
-    dut.wvalid_i.value = 1
+    _port(dut, "awvalid_i").value = 0
+    _port(dut, "wdata_i").value = 0
+    _port(dut, "wstrb_i").value = 0xFF
+    _port(dut, "wlast_i").value = 1
+    _port(dut, "wvalid_i").value = 1
     while True:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.wready_o.value) and int(dut.wvalid_i.value):
+        if int(_port(dut, "wready_o").value) and int(_port(dut, "wvalid_i").value):
             break
     await RisingEdge(dut.clk_i)
     await ReadOnly()
     await Timer(1, unit="ps")
-    dut.wvalid_i.value = 0
-    dut.bready_i.value = 0
+    _port(dut, "wvalid_i").value = 0
+    _port(dut, "bready_i").value = 0
     for _ in range(500):
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if int(dut.bvalid_o.value):
+        if int(_port(dut, "bvalid_o").value):
             break
     else:
         assert False, "bvalid_o never asserted with bready=0"
     await RisingEdge(dut.clk_i)
     await ReadOnly()
     await Timer(1, unit="ps")
-    assert int(dut.bvalid_o.value) == 1, (
-        f"bvalid_o should stay high, got {dut.bvalid_o.value}"
+    assert int(_port(dut, "bvalid_o").value) == 1, (
+        f"bvalid_o should stay high, got {_port(dut, 'bvalid_o').value}"
     )
-    assert int(dut.bresp_o.value) == 0
+    assert int(_port(dut, "bresp_o").value) == 0
     for _ in range(10):
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        assert int(dut.bvalid_o.value) == 1, "bvalid_o dropped while bready=0"
-    dut.bready_i.value = 1
+        assert int(_port(dut, "bvalid_o").value) == 1, "bvalid_o dropped while bready=0"
+    _port(dut, "bready_i").value = 1
     for _ in range(20):
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         await Timer(1, unit="ps")
-        if not int(dut.bvalid_o.value):
+        if not int(_port(dut, "bvalid_o").value):
             break
     _touch("axi", "bready_backpressure")
+    _write_coverage()
+
+
+@cocotb.test()
+async def test_multichan_independent(dut) -> None:
+    if NUM_CH < 4:
+        return
+    await _tb_begin(dut, watchdog_cycles=5000)
+
+    async def ch0_write() -> None:
+        await _axi_write_single(dut, bank=0, row=3, col=1, axid=0, ch=0)
+
+    async def ch1_read() -> None:
+        await _axi_read_single(dut, bank=1, row=4, col=2, axid=1, ch=1)
+
+    t0 = cocotb.start_soon(ch0_write())
+    t1 = cocotb.start_soon(ch1_read())
+    await t0
+    await t1
+
+    for _ in range(20):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        await Timer(1, unit="ps")
+        if int(_port(dut, "drfm_req_o", 1).value):
+            assert int(_port(dut, "drfm_req_o", 0).value) == 0, "ch1 DRFM must not follow ch0"
+            break
+
+    _touch("multichan", "independent_rw")
+    _write_coverage()
+
+
+@cocotb.test()
+async def test_multichan_refresh_all(dut) -> None:
+    if NUM_CH < 4:
+        return
+    await _tb_begin(dut, watchdog_cycles=10000)
+
+    saw0 = False
+    saw1 = False
+    cyc0: int | None = None
+    cyc1: int | None = None
+
+    for cyc in range(2000):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        await Timer(1, unit="ps")
+        if int(_port(dut, "drfm_req_o", 0).value):
+            saw0 = True
+            if cyc0 is None:
+                cyc0 = cyc
+            _port(dut, "drfm_ack_i", 0).value = 1
+        else:
+            _port(dut, "drfm_ack_i", 0).value = 0
+        if int(_port(dut, "drfm_req_o", 1).value):
+            saw1 = True
+            if cyc1 is None:
+                cyc1 = cyc
+            _port(dut, "drfm_ack_i", 1).value = 1
+        else:
+            _port(dut, "drfm_ack_i", 1).value = 0
+        if saw0 and saw1 and cyc0 is not None and cyc1 is not None:
+            assert abs(cyc0 - cyc1) <= 1000, f"DRFM skew {abs(cyc0 - cyc1)} > 1000 cycles"
+            break
+
+    assert saw0 and saw1, "DRFM must assert on channels 0 and 1"
+    _touch("multichan", "refresh_all")
     _write_coverage()
