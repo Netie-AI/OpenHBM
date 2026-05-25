@@ -95,6 +95,9 @@ def _drive_all_inputs_idle(dut) -> None:
         _port(dut, "dfi_phyupd_req_i", ch).value = 0
         _port(dut, "dfi_lp_ctrl_ack_i", ch).value = 0
         _port(dut, "dfi_lp_data_ack_i", ch).value = 0
+        _port(dut, "pwrdn_req_i", ch).value = 0
+        _port(dut, "sref_req_i", ch).value = 0
+        _port(dut, "exit_req_i", ch).value = 0
 
 
 async def _tb_begin(dut, watchdog_cycles: int = 2000) -> None:
@@ -651,3 +654,134 @@ async def test_dfi_phyupd_ack(dut) -> None:
     assert int(_port(dut, "dfi_phyupd_ack_o").value) == 0, "phyupd_ack must drop within 1 cycle of req deassert"
     _touch("dfi", "phyupd_ack")
     _write_coverage()
+
+
+@cocotb.test()
+async def test_powerdown_entry(dut) -> None:
+    """All banks idle + pwrdn_req enters CHAN_PD and asserts LP req."""
+    await _tb_begin(dut)
+    _port(dut, "pwrdn_req_i", 0).value = 1
+    for _ in range(5):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    _port(dut, "pwrdn_req_i", 0).value = 0
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    assert int(_port(dut, "pw_state_o", 0).value) == 1, (
+        f"Expected CHAN_PD(1), got {_port(dut, 'pw_state_o', 0).value}"
+    )
+    assert int(_port(dut, "dfi_lp_ctrl_req_o", 0).value) == 1, "LP req not asserted"
+    _touch("pwrdn", "entry")
+
+
+@cocotb.test()
+async def test_powerdown_exit(dut) -> None:
+    """From CHAN_PD, exit_req returns to CHAN_ACTIVE after T_XPDLL."""
+    await _tb_begin(dut)
+    _port(dut, "pwrdn_req_i", 0).value = 1
+    for _ in range(5):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    _port(dut, "pwrdn_req_i", 0).value = 0
+    _port(dut, "dfi_lp_ctrl_ack_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "dfi_lp_ctrl_ack_i", 0).value = 0
+    for _ in range(2):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    _port(dut, "exit_req_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "exit_req_i", 0).value = 0
+    for _ in range(15):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    assert int(_port(dut, "pw_state_o", 0).value) == 0, (
+        f"Expected CHAN_ACTIVE(0), got {_port(dut, 'pw_state_o', 0).value}"
+    )
+    _touch("pwrdn", "exit")
+
+
+@cocotb.test()
+async def test_selfref_entry(dut) -> None:
+    """sref_req_i enters CHAN_SREF."""
+    await _tb_begin(dut)
+    _port(dut, "sref_req_i", 0).value = 1
+    for _ in range(5):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    _port(dut, "sref_req_i", 0).value = 0
+    for _ in range(3):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    assert int(_port(dut, "pw_state_o", 0).value) == 2, (
+        f"Expected CHAN_SREF(2), got {_port(dut, 'pw_state_o', 0).value}"
+    )
+    _touch("pwrdn", "sref_entry")
+
+
+@cocotb.test()
+async def test_selfref_exit_timing(dut) -> None:
+    """After SREF exit, remain in CHAN_SREF_EXIT until T_XSR elapses."""
+    await _tb_begin(dut)
+    _port(dut, "sref_req_i", 0).value = 1
+    for _ in range(5):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    _port(dut, "sref_req_i", 0).value = 0
+    _port(dut, "dfi_lp_ctrl_ack_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "dfi_lp_ctrl_ack_i", 0).value = 0
+    _port(dut, "exit_req_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "exit_req_i", 0).value = 0
+    for _ in range(100):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    assert int(_port(dut, "pw_state_o", 0).value) == 3, (
+        f"Should still be CHAN_SREF_EXIT(3) at 100 cycles, got {_port(dut, 'pw_state_o', 0).value}"
+    )
+    for _ in range(115):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    assert int(_port(dut, "pw_state_o", 0).value) == 0, (
+        f"Expected CHAN_ACTIVE after T_XSR, got {_port(dut, 'pw_state_o', 0).value}"
+    )
+    _touch("pwrdn", "sref_exit")
+
+
+@cocotb.test()
+async def test_no_cmd_during_pd(dut) -> None:
+    """While in CHAN_PD, AXI4 write must not assert DFI cs_n."""
+    await _tb_begin(dut)
+    _port(dut, "pwrdn_req_i", 0).value = 1
+    for _ in range(5):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    _port(dut, "pwrdn_req_i", 0).value = 0
+    _port(dut, "dfi_lp_ctrl_ack_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "dfi_lp_ctrl_ack_i", 0).value = 0
+    for _ in range(2):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    assert int(_port(dut, "pw_state_o", 0).value) == 1, "must be in PD before AXI stimulus"
+
+    _port(dut, "awid_i", 0).value = 0
+    _port(dut, "awaddr_i", 0).value = 0x0000_0040
+    _port(dut, "awlen_i", 0).value = 0
+    _port(dut, "awsize_i", 0).value = 3
+    _port(dut, "awburst_i", 0).value = BURST_INCR
+    _port(dut, "awvalid_i", 0).value = 1
+    for _ in range(20):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        await Timer(1, unit="ps")
+        assert int(_dfi(dut, "dfi_cs_n_o", 0).value) == 1, "DFI command issued while in power-down"
+    _port(dut, "awvalid_i", 0).value = 0
+    _touch("pwrdn", "no_cmd_pd")

@@ -51,7 +51,8 @@ module hbm4_ctrl_dfi_bridge #(
     output logic                          dfi_lp_data_req_o,
     input  logic                          dfi_lp_data_ack_i,
 
-    input  logic                          inhibit_cmds_i
+    input  logic                          inhibit_cmds_i,
+    input  logic                          cke_req_i
 );
 
   import hbm4_ctrl_pkg::*;
@@ -129,7 +130,7 @@ module hbm4_ctrl_dfi_bridge #(
       dfi_reset_n_o     <= 1'b0;
     end else begin
       dfi_reset_n_o    <= 1'b1;
-      dfi_cke_o        <= 1'b1;
+      dfi_cke_o        <= cke_req_i;
       upd_timer_q      <= upd_timer_q + 12'd1;
       dfi_phyupd_ack_o <= dfi_phyupd_req_i;
 

@@ -46,4 +46,18 @@ package hbm4_ctrl_pkg;
   typedef logic [ROW_W-1:0] row_t;
   typedef logic [COL_W-1:0] col_t;
 
+  // P4 — power-down FSM states
+  typedef enum logic [1:0] {
+    CHAN_ACTIVE    = 2'd0,
+    CHAN_PD        = 2'd1,
+    CHAN_SREF      = 2'd2,
+    CHAN_SREF_EXIT = 2'd3
+  } chan_pw_state_e;
+
+  // P4 — power-down timing parameters (cycles at 1 GHz ≈ 1 ns/cycle)
+  localparam int unsigned T_CKE   = 3;    // verilog_lint: waive parameter-name-style -- JEDEC tCK
+  localparam int unsigned T_CKESR = 4;    // verilog_lint: waive parameter-name-style -- JEDEC tCKESR
+  localparam int unsigned T_XSR   = 200;  // verilog_lint: waive parameter-name-style -- JEDEC tXSR
+  localparam int unsigned T_XPDLL = 10;   // verilog_lint: waive parameter-name-style -- JEDEC tXPDLL
+
 endpackage : hbm4_ctrl_pkg

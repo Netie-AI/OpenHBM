@@ -90,7 +90,12 @@ module hbm4_ctrl #(
     output logic [3:0] dfi_lp_ctrl_wakeup_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     input  logic dfi_lp_ctrl_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     output logic dfi_lp_data_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
-    input  logic dfi_lp_data_ack_i [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_lp_data_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    input  logic pwrdn_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic sref_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic exit_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::chan_pw_state_e pw_state_o [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
 );
 
   import hbm4_ctrl_pkg::*;
@@ -179,7 +184,11 @@ module hbm4_ctrl #(
           .dfi_lp_ctrl_wakeup_o (dfi_lp_ctrl_wakeup_o[ch]),
           .dfi_lp_ctrl_ack_i    (dfi_lp_ctrl_ack_i[ch]),
           .dfi_lp_data_req_o    (dfi_lp_data_req_o[ch]),
-          .dfi_lp_data_ack_i    (dfi_lp_data_ack_i[ch])
+          .dfi_lp_data_ack_i    (dfi_lp_data_ack_i[ch]),
+          .pwrdn_req_i          (pwrdn_req_i[ch]),
+          .sref_req_i           (sref_req_i[ch]),
+          .exit_req_i           (exit_req_i[ch]),
+          .pw_state_o           (pw_state_o[ch])
       );
     end
   endgenerate

@@ -90,7 +90,12 @@ module hbm4_ctrl_chan_top #(
     output logic [3:0]                                 dfi_lp_ctrl_wakeup_o,
     input  logic                                       dfi_lp_ctrl_ack_i,
     output logic                                       dfi_lp_data_req_o,
-    input  logic                                       dfi_lp_data_ack_i
+    input  logic                                       dfi_lp_data_ack_i,
+
+    input  logic                                       pwrdn_req_i,
+    input  logic                                       sref_req_i,
+    input  logic                                       exit_req_i,
+    output hbm4_ctrl_pkg::chan_pw_state_e            pw_state_o
 );
 
   import hbm4_ctrl_pkg::*;
@@ -196,6 +201,31 @@ module hbm4_ctrl_chan_top #(
 
   assign drfm_req_o = drfm_arm_q;
 
+  logic [NumB-1:0] bank_idle_bus;
+  logic            chan_inhibit;
+  logic            chan_cke_req;
+
+  always_comb begin : g_bank_idle
+    for (int unsigned bi = 0; bi < NumB; bi++) begin
+      bank_idle_bus[bi] = (b_bank_state[bi] == BANK_IDLE);
+    end
+  end
+
+  hbm4_ctrl_pwrdn #(.NUM_BANKS(NumB)) u_pwrdn (
+      .clk_i                (clk_i),
+      .rst_ni               (rst_ni),
+      .bank_idle_i          (bank_idle_bus),
+      .pwrdn_req_i          (pwrdn_req_i),
+      .sref_req_i           (sref_req_i),
+      .exit_req_i           (exit_req_i),
+      .dfi_lp_ctrl_req_o    (dfi_lp_ctrl_req_o),
+      .dfi_lp_ctrl_wakeup_o (dfi_lp_ctrl_wakeup_o),
+      .dfi_lp_ctrl_ack_i    (dfi_lp_ctrl_ack_i),
+      .inhibit_cmds_o       (chan_inhibit),
+      .cke_req_o            (chan_cke_req),
+      .pw_state_o           (pw_state_o)
+  );
+
   always_comb begin : g_rf0
     b_refresh_req = '0;
     b_refresh_req[0] = drfm_ack_i;
@@ -290,12 +320,13 @@ module hbm4_ctrl_chan_top #(
       .dfi_ctrlupd_ack_i    (dfi_ctrlupd_ack_i),
       .dfi_phyupd_req_i     (dfi_phyupd_req_i),
       .dfi_phyupd_ack_o     (dfi_phyupd_ack_o),
-      .dfi_lp_ctrl_req_o    (dfi_lp_ctrl_req_o),
-      .dfi_lp_ctrl_wakeup_o (dfi_lp_ctrl_wakeup_o),
+      .dfi_lp_ctrl_req_o    (),
+      .dfi_lp_ctrl_wakeup_o (),
       .dfi_lp_ctrl_ack_i    (dfi_lp_ctrl_ack_i),
       .dfi_lp_data_req_o    (dfi_lp_data_req_o),
       .dfi_lp_data_ack_i    (dfi_lp_data_ack_i),
-      .inhibit_cmds_i       (1'b0)
+      .inhibit_cmds_i       (chan_inhibit),
+      .cke_req_i            (chan_cke_req)
   );
 
   always_comb begin : g_rr

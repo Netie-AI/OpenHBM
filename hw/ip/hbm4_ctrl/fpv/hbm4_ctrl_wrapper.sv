@@ -93,6 +93,11 @@ module hbm4_ctrl_fpv_wrapper;
   logic                  dfi_lp_data_req_o;
   logic                  dfi_lp_data_ack_i;
 
+  logic                  pwrdn_req_i;
+  logic                  sref_req_i;
+  logic                  exit_req_i;
+  hbm4_ctrl_pkg::chan_pw_state_e pw_state_o;
+
   logic [15:0]         cyc_since_act;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_stim
@@ -116,6 +121,9 @@ module hbm4_ctrl_fpv_wrapper;
       arvalid_i  <= 1'b0;
       rready_i   <= 1'b1;
       drfm_ack_i <= 1'b0;
+      pwrdn_req_i <= 1'b0;
+      sref_req_i  <= 1'b0;
+      exit_req_i  <= 1'b0;
     end else begin
       awvalid_i  <= ~awvalid_i;
       awaddr_i   <= awaddr_i ^ Aaw'(32'h0000_0040);
@@ -199,6 +207,10 @@ module hbm4_ctrl_fpv_wrapper;
   logic                  dfi_lp_ctrl_ack_arr [0:0];
   logic                  dfi_lp_data_req_arr [0:0];
   logic                  dfi_lp_data_ack_arr [0:0];
+  logic                  pwrdn_req_arr [0:0];
+  logic                  sref_req_arr [0:0];
+  logic                  exit_req_arr [0:0];
+  hbm4_ctrl_pkg::chan_pw_state_e pw_state_arr [0:0];
 
   assign dfi_wrdata_ack_i     = 1'b1;
   assign dfi_rddata_i         = '0;
@@ -225,6 +237,9 @@ module hbm4_ctrl_fpv_wrapper;
   assign arvalid_arr[0] = arvalid_i;
   assign rready_arr[0]   = rready_i;
   assign drfm_ack_arr[0] = drfm_ack_i;
+  assign pwrdn_req_arr[0] = pwrdn_req_i;
+  assign sref_req_arr[0]  = sref_req_i;
+  assign exit_req_arr[0]  = exit_req_i;
 
   assign awready_o   = awready_arr[0];
   assign wready_o    = wready_arr[0];
@@ -338,8 +353,14 @@ module hbm4_ctrl_fpv_wrapper;
       .dfi_lp_ctrl_wakeup_o (dfi_lp_ctrl_wakeup_arr),
       .dfi_lp_ctrl_ack_i    (dfi_lp_ctrl_ack_arr),
       .dfi_lp_data_req_o    (dfi_lp_data_req_arr),
-      .dfi_lp_data_ack_i    (dfi_lp_data_ack_arr)
+      .dfi_lp_data_ack_i    (dfi_lp_data_ack_arr),
+      .pwrdn_req_i          (pwrdn_req_arr),
+      .sref_req_i           (sref_req_arr),
+      .exit_req_i           (exit_req_arr),
+      .pw_state_o           (pw_state_arr)
   );
+
+  assign pw_state_o = pw_state_arr[0];
 
   hbm4_ctrl_abs u_abs (
       .clk_i               (clk_i),
@@ -350,7 +371,12 @@ module hbm4_ctrl_fpv_wrapper;
       .drfm_ack_i          (drfm_ack_i),
       .dfi_ctrlupd_req_i   (dfi_ctrlupd_req_o),
       .dfi_ctrlupd_ack_i   (dfi_ctrlupd_ack_i),
-      .dfi_phyupd_req_i    (dfi_phyupd_req_i)
+      .dfi_phyupd_req_i    (dfi_phyupd_req_i),
+      .dfi_lp_ctrl_req_i   (dfi_lp_ctrl_req_o),
+      .dfi_lp_ctrl_ack_i   (dfi_lp_ctrl_ack_i),
+      .pwrdn_req_i         (pwrdn_req_i),
+      .sref_req_i          (sref_req_i),
+      .exit_req_i          (exit_req_i)
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_cyc_act
@@ -397,6 +423,35 @@ module hbm4_ctrl_fpv_wrapper;
     dut.g_channel[0].u_chan.u_dfi.dfi_phyupd_req_i;
   endproperty
   ap_phyupd_gated: assert property (p_phyupd_gated);
+
+  property p4_inhibit_only_in_lp;
+    @(posedge clk_i) disable iff (!rst_ni)
+    dut.g_channel[0].u_chan.u_pwrdn.inhibit_cmds_o |->
+      (dut.g_channel[0].u_chan.u_pwrdn.pw_state_o != CHAN_ACTIVE) ||
+      (dut.g_channel[0].u_chan.u_pwrdn.timer_q != '0);
+  endproperty
+  P4F1_inhibit: assert property (p4_inhibit_only_in_lp);
+
+  property p4_cke_deassert_after_idle;
+    @(posedge clk_i) disable iff (!rst_ni)
+    $fell(dut.g_channel[0].u_chan.u_pwrdn.cke_req_o) |->
+      $past(&dut.g_channel[0].u_chan.u_pwrdn.bank_idle_i, 1);
+  endproperty
+  P4F2_cke_after_idle: assert property (p4_cke_deassert_after_idle);
+
+  property p4_no_cmd_cke_low;
+    @(posedge clk_i) disable iff (!rst_ni)
+    !dut.g_channel[0].u_chan.u_pwrdn.cke_req_o |->
+      dut.g_channel[0].u_chan.u_dfi.dfi_cs_n_o;
+  endproperty
+  P4F3_no_cmd_cke_low: assert property (p4_no_cmd_cke_low);
+
+  property p4_txsr_respected;
+    @(posedge clk_i) disable iff (!rst_ni)
+    $rose(dut.g_channel[0].u_chan.u_pwrdn.pw_state_o == CHAN_SREF_EXIT) |->
+      ##[T_XSR:T_XSR+5] !dut.g_channel[0].u_chan.u_pwrdn.inhibit_cmds_o;
+  endproperty
+  P4F4_txsr: assert property (p4_txsr_respected);
 
 endmodule : hbm4_ctrl_fpv_wrapper
 

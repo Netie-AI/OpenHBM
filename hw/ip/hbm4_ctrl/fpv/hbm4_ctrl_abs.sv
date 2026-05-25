@@ -16,7 +16,12 @@ module hbm4_ctrl_abs #(
     input logic                    drfm_ack_i,
     input logic                    dfi_ctrlupd_req_i,
     input logic                    dfi_ctrlupd_ack_i,
-    input logic                    dfi_phyupd_req_i
+    input logic                    dfi_phyupd_req_i,
+    input logic                    dfi_lp_ctrl_req_i,
+    input logic                    dfi_lp_ctrl_ack_i,
+    input logic                    pwrdn_req_i,
+    input logic                    sref_req_i,
+    input logic                    exit_req_i
 );
 
   assume property (@(posedge clk_i) disable iff (!rst_ni) !$isunknown(awvalid_i));
@@ -46,6 +51,15 @@ module hbm4_ctrl_abs #(
   end
   a_phyupd_bound: assume property (@(posedge clk_i) disable iff (!rst_ni)
       phyupd_len_q <= 2'd3);
+
+  property lp_ack_response;
+    @(posedge clk_i) disable iff (!rst_ni)
+    dfi_lp_ctrl_req_i |-> ##[1:4] dfi_lp_ctrl_ack_i;
+  endproperty
+  a_lp_ack_response: assume property (lp_ack_response);
+
+  assume property (@(posedge clk_i) disable iff (!rst_ni) !(pwrdn_req_i && exit_req_i));
+  assume property (@(posedge clk_i) disable iff (!rst_ni) !(sref_req_i && exit_req_i));
 
 endmodule : hbm4_ctrl_abs
 
