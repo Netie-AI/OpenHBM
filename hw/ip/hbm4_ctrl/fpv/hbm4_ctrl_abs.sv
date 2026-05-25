@@ -12,7 +12,11 @@ module hbm4_ctrl_abs #(
     input logic                    rst_ni,
     input logic                    awvalid_i,
     input logic [P_AXI_ADDR_W-1:0] awaddr_i,
+    input logic [3:0]              awqos_i,
+    input logic                    awready_i,
     input logic                    arvalid_i,
+    input logic [3:0]              arqos_i,
+    input logic                    arready_i,
     input logic                    drfm_ack_i,
     input logic                    dfi_ctrlupd_req_i,
     input logic                    dfi_ctrlupd_ack_i,
@@ -81,6 +85,12 @@ module hbm4_ctrl_abs #(
   // No simultaneous wrlvl + rdlvl request from software
   assume property (@(posedge clk_i) disable iff (!rst_ni)
       !(wrlvl_req_i && rdlvl_req_i));
+
+  // QoS field stays stable for the duration of a burst
+  assume property (@(posedge clk_i) disable iff (!rst_ni)
+      awvalid_i && !awready_i |-> $stable(awqos_i));
+  assume property (@(posedge clk_i) disable iff (!rst_ni)
+      arvalid_i && !arready_i |-> $stable(arqos_i));
 
 endmodule : hbm4_ctrl_abs
 

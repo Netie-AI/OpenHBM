@@ -24,6 +24,7 @@ module hbm4_ctrl_axi4_slave #(
     input  logic [7:0]               awlen_i,
     input  logic [2:0]               awsize_i,
     input  logic [1:0]               awburst_i,
+    input  logic [3:0]               awqos_i,
     input  logic                     awvalid_i,
     output logic                     awready_o,
 
@@ -43,6 +44,7 @@ module hbm4_ctrl_axi4_slave #(
     input  logic [7:0]              arlen_i,
     input  logic [2:0]              arsize_i,
     input  logic [1:0]              arburst_i,
+    input  logic [3:0]              arqos_i,
     input  logic                    arvalid_i,
     output logic                    arready_o,
 
@@ -62,7 +64,9 @@ module hbm4_ctrl_axi4_slave #(
 
     input logic                    cmd_fire_i,
     input hbm4_ctrl_pkg::cmd_e     cmd_i,
-    input hbm4_ctrl_pkg::bank_addr_t cmd_bank_i
+    input hbm4_ctrl_pkg::bank_addr_t cmd_bank_i,
+
+    output logic [1:0]             qos_class_o
 );
 
   import hbm4_ctrl_pkg::*;
@@ -80,6 +84,7 @@ module hbm4_ctrl_axi4_slave #(
     logic [7:0]               len;
     logic [2:0]               size;
     logic [1:0]               burst;
+    logic [1:0]               qos;
     logic                     illegal;
   } ax_desc_t;
 
@@ -206,6 +211,7 @@ module hbm4_ctrl_axi4_slave #(
           len: awlen_i,
           size: awsize_i,
           burst: awburst_i,
+          qos: awqos_i[3:2],
           illegal: (awburst_i != BURST_INCR)
       };
     end
@@ -233,6 +239,7 @@ module hbm4_ctrl_axi4_slave #(
           len: arlen_i,
           size: arsize_i,
           burst: arburst_i,
+          qos: arqos_i[3:2],
           illegal: (arburst_i != BURST_INCR)
       };
     end
@@ -249,6 +256,11 @@ module hbm4_ctrl_axi4_slave #(
       default:                wready_o = 1'b0;
     endcase
   end
+
+  assign qos_class_o =
+      (st_q inside {S_W_ISSUE, S_W_WAIT0, S_W_WAIT_CMD, S_W_GAP, S_W_B}) ? txn.qos :
+      (st_q inside {S_R_ISSUE, S_R_WAIT0, S_R_WAIT_CMD, S_R_DRIVE}) ? txn.qos :
+      (awvalid_i ? awqos_i[3:2] : arqos_i[3:2]);
 
   always_comb begin : g_core_req
     core_req_valid_o = 1'b0;

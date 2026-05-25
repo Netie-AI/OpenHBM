@@ -84,4 +84,21 @@ package hbm4_ctrl_pkg;
 
   localparam int unsigned TRAIN_TIMEOUT = 1024;  // verilog_lint: waive parameter-name-style -- cycles before TRAIN_ERR
 
+  // P7 — QoS classes and DWRR weights
+  typedef enum logic [1:0] {
+    QOS_P0 = 2'd0,   // highest — real-time / interrupt
+    QOS_P1 = 2'd1,   // high     — latency-sensitive
+    QOS_P2 = 2'd2,   // normal   — best-effort bulk
+    QOS_P3 = 2'd3    // low      — background scrub
+  } qos_class_e;
+
+  // DWRR weights per class (total = 15 slots per round)
+  localparam int unsigned QosW0 = 8;   // verilog_lint: waive parameter-name-style -- P0 DWRR quantum
+  localparam int unsigned QosW1 = 4;   // verilog_lint: waive parameter-name-style -- P1 DWRR quantum
+  localparam int unsigned QosW2 = 2;   // verilog_lint: waive parameter-name-style -- P2 DWRR quantum
+  localparam int unsigned QosW3 = 1;   // verilog_lint: waive parameter-name-style -- P3 DWRR quantum
+
+  // Starvation guard: P3 guaranteed 1 slot per N rounds
+  localparam int unsigned QosStarvationLimit = 64;  // verilog_lint: waive parameter-name-style -- P3 guard
+
 endpackage : hbm4_ctrl_pkg

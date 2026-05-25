@@ -23,6 +23,7 @@ module hbm4_ctrl_fpv_wrapper;
   logic [7:0]            awlen_i;
   logic [2:0]            awsize_i;
   logic [1:0]            awburst_i;
+  logic [3:0]            awqos_i;
   logic                  awvalid_i;
   logic                  awready_o;
 
@@ -42,6 +43,7 @@ module hbm4_ctrl_fpv_wrapper;
   logic [7:0]            arlen_i;
   logic [2:0]            arsize_i;
   logic [1:0]            arburst_i;
+  logic [3:0]            arqos_i;
   logic                  arvalid_i;
   logic                  arready_o;
 
@@ -112,6 +114,7 @@ module hbm4_ctrl_fpv_wrapper;
       awlen_i    <= '0;
       awsize_i   <= 3'd3;
       awburst_i  <= BURST_INCR;
+      awqos_i    <= 4'h0;
       awvalid_i  <= 1'b0;
       wdata_i    <= '0;
       wstrb_i    <= '1;
@@ -123,6 +126,7 @@ module hbm4_ctrl_fpv_wrapper;
       arlen_i    <= '0;
       arsize_i   <= 3'd3;
       arburst_i  <= BURST_INCR;
+      arqos_i    <= 4'h0;
       arvalid_i  <= 1'b0;
       rready_i   <= 1'b1;
       drfm_ack_i <= 1'b0;
@@ -161,6 +165,7 @@ module hbm4_ctrl_fpv_wrapper;
   logic [7:0]            awlen_arr [0:0];
   logic [2:0]            awsize_arr [0:0];
   logic [1:0]            awburst_arr [0:0];
+  logic [3:0]            awqos_arr [0:0];
   logic                  awvalid_arr [0:0];
   logic                  awready_arr [0:0];
   logic [Adw-1:0]        wdata_arr [0:0];
@@ -177,6 +182,7 @@ module hbm4_ctrl_fpv_wrapper;
   logic [7:0]            arlen_arr [0:0];
   logic [2:0]            arsize_arr [0:0];
   logic [1:0]            arburst_arr [0:0];
+  logic [3:0]            arqos_arr [0:0];
   logic                  arvalid_arr [0:0];
   logic                  arready_arr [0:0];
   logic [Aiw-1:0]        rid_arr [0:0];
@@ -232,6 +238,7 @@ module hbm4_ctrl_fpv_wrapper;
   logic                  training_done_arr [0:0];
   logic                  training_err_arr [0:0];
   hbm4_ctrl_pkg::train_state_e train_state_arr [0:0];
+  logic                        qos_starvation_arr [0:0];
 
   assign dfi_wrdata_ack_i     = 1'b1;
   assign dfi_rddata_i         = '0;
@@ -244,6 +251,7 @@ module hbm4_ctrl_fpv_wrapper;
   assign awlen_arr[0]    = awlen_i;
   assign awsize_arr[0]   = awsize_i;
   assign awburst_arr[0]  = awburst_i;
+  assign awqos_arr[0]    = awqos_i;
   assign awvalid_arr[0]  = awvalid_i;
   assign wdata_arr[0]    = wdata_i;
   assign wstrb_arr[0]    = wstrb_i;
@@ -255,6 +263,7 @@ module hbm4_ctrl_fpv_wrapper;
   assign arlen_arr[0]    = arlen_i;
   assign arsize_arr[0]  = arsize_i;
   assign arburst_arr[0] = arburst_i;
+  assign arqos_arr[0]   = arqos_i;
   assign arvalid_arr[0] = arvalid_i;
   assign rready_arr[0]   = rready_i;
   assign drfm_ack_arr[0] = drfm_ack_i;
@@ -322,6 +331,7 @@ module hbm4_ctrl_fpv_wrapper;
       .awlen_i            (awlen_arr),
       .awsize_i           (awsize_arr),
       .awburst_i          (awburst_arr),
+      .awqos_i            (awqos_arr),
       .awvalid_i          (awvalid_arr),
       .awready_o          (awready_arr),
       .wdata_i            (wdata_arr),
@@ -338,6 +348,7 @@ module hbm4_ctrl_fpv_wrapper;
       .arlen_i            (arlen_arr),
       .arsize_i           (arsize_arr),
       .arburst_i          (arburst_arr),
+      .arqos_i            (arqos_arr),
       .arvalid_i          (arvalid_arr),
       .arready_o          (arready_arr),
       .rid_o              (rid_arr),
@@ -394,7 +405,8 @@ module hbm4_ctrl_fpv_wrapper;
       .dfi_rdlvl_req_o      (dfi_rdlvl_req_arr),
       .training_done_o      (training_done_arr),
       .training_err_o       (training_err_arr),
-      .train_state_o        (train_state_arr)
+      .train_state_o        (train_state_arr),
+      .qos_starvation_o     (qos_starvation_arr)
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_train_ack
@@ -430,7 +442,11 @@ module hbm4_ctrl_fpv_wrapper;
       .dfi_wrlvl_req_o     (dfi_wrlvl_req_arr[0]),
       .dfi_rdlvl_req_o     (dfi_rdlvl_req_arr[0]),
       .dfi_wrlvl_ack_i     (dfi_wrlvl_ack_i),
-      .dfi_rdlvl_ack_i     (dfi_rdlvl_ack_i)
+      .dfi_rdlvl_ack_i     (dfi_rdlvl_ack_i),
+      .awqos_i             (awqos_i),
+      .arqos_i             (arqos_i),
+      .awready_i           (awready_o),
+      .arready_i           (arready_o)
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_cyc_act
@@ -571,6 +587,39 @@ module hbm4_ctrl_fpv_wrapper;
       !dut.g_channel[0].u_chan.u_training.training_done_o;
   endproperty
   P6F4_done_pulse: assert property (p6_done_pulse);
+
+  // P7.F1 — P0 request always wins over P3 in same cycle
+  property p7_p0_beats_p3;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (|(dut.g_channel[0].u_chan.u_sched.bank_cmd_valid_i &
+       (dut.g_channel[0].u_chan.u_sched.bank_qos_i == hbm4_ctrl_pkg::QOS_P0))) |->
+    ##[0:2] (dut.g_channel[0].u_chan.u_sched.current_class_q == hbm4_ctrl_pkg::QOS_P0);
+  endproperty
+  P7F1_p0_beats_p3: assert property (p7_p0_beats_p3);
+
+  // P7.F2 — starvation counter never exceeds QOS_STARVATION_LIMIT
+  property p7_starvation_bounded;
+    @(posedge clk_i) disable iff (!rst_ni)
+    dut.g_channel[0].u_chan.u_sched.starvation_cnt_q <=
+      hbm4_ctrl_pkg::QosStarvationLimit;
+  endproperty
+  P7F2_starvation_bounded: assert property (p7_starvation_bounded);
+
+  // P7.F3 — deficit counter never underflows (stays >= 0)
+  property p7_deficit_no_underflow;
+    @(posedge clk_i) disable iff (!rst_ni)
+    !(dut.g_channel[0].u_chan.u_sched.deficit_counter_q[0] == 8'hFF);
+  endproperty
+  P7F3_deficit_no_underflow: assert property (p7_deficit_no_underflow);
+
+  // P7.F4 — starvation_o asserts iff counter at limit
+  property p7_starvation_signal;
+    @(posedge clk_i) disable iff (!rst_ni)
+    dut.g_channel[0].u_chan.qos_starvation_o |->
+      (dut.g_channel[0].u_chan.u_sched.starvation_cnt_q >=
+       hbm4_ctrl_pkg::QosStarvationLimit);
+  endproperty
+  P7F4_starvation_signal: assert property (p7_starvation_signal);
 
 endmodule : hbm4_ctrl_fpv_wrapper
 

@@ -27,6 +27,7 @@ module hbm4_ctrl_chan_top #(
     input  logic [7:0]              awlen_i,
     input  logic [2:0]              awsize_i,
     input  logic [1:0]              awburst_i,
+    input  logic [3:0]              awqos_i,
     input  logic                    awvalid_i,
     output logic                    awready_o,
 
@@ -46,6 +47,7 @@ module hbm4_ctrl_chan_top #(
     input  logic [7:0]            arlen_i,
     input  logic [2:0]            arsize_i,
     input  logic [1:0]            arburst_i,
+    input  logic [3:0]            arqos_i,
     input  logic                  arvalid_i,
     output logic                  arready_o,
 
@@ -109,7 +111,9 @@ module hbm4_ctrl_chan_top #(
     output logic                                       dfi_rdlvl_req_o,
     output logic                                       training_done_o,
     output logic                                       training_err_o,
-    output hbm4_ctrl_pkg::train_state_e                train_state_o
+    output hbm4_ctrl_pkg::train_state_e                train_state_o,
+
+    output logic                                       qos_starvation_o
 );
 
   import hbm4_ctrl_pkg::*;
@@ -131,6 +135,10 @@ module hbm4_ctrl_chan_top #(
   logic [COL_W-1:0]      sched_cmd_col;
   logic                  cmd_accepted;
 
+  logic [1:0]            axi_qos_class;
+  qos_class_e            qos_class;
+  qos_class_e [NumB-1:0] bank_qos;
+
   logic cmd_fire;
   assign cmd_fire = sched_cmd_valid;
 
@@ -150,6 +158,7 @@ module hbm4_ctrl_chan_top #(
       .awlen_i            (awlen_i),
       .awsize_i           (awsize_i),
       .awburst_i          (awburst_i),
+      .awqos_i            (awqos_i),
       .awvalid_i          (awvalid_i),
       .awready_o          (awready_o),
       .wdata_i            (wdata_i),
@@ -166,6 +175,7 @@ module hbm4_ctrl_chan_top #(
       .arlen_i            (arlen_i),
       .arsize_i           (arsize_i),
       .arburst_i          (arburst_i),
+      .arqos_i            (arqos_i),
       .arvalid_i          (arvalid_i),
       .arready_o          (arready_o),
       .rid_o              (rid_o),
@@ -182,8 +192,18 @@ module hbm4_ctrl_chan_top #(
       .core_req_ready_i   (int_req_ready),
       .cmd_fire_i         (cmd_fire),
       .cmd_i              (sched_cmd),
-      .cmd_bank_i         (sched_cmd_bank)
+      .cmd_bank_i         (sched_cmd_bank),
+      .qos_class_o        (axi_qos_class)
   );
+
+  assign qos_class = qos_class_e'(axi_qos_class);
+
+  genvar bqos;
+  generate
+    for (bqos = 0; bqos < NumB; bqos++) begin : g_bank_qos
+      assign bank_qos[bqos] = qos_class;
+    end
+  endgenerate
 
   logic [NumB-1:0]                 b_req_ready;
   logic [NumB-1:0]                 b_cmd_valid;
@@ -314,13 +334,16 @@ module hbm4_ctrl_chan_top #(
       .bank_cmd_i          (b_cmd),
       .bank_cmd_row_i      (b_cmd_row),
       .bank_cmd_col_i      (b_cmd_col),
+      .bank_qos_i          (bank_qos),
+      .page_policy_i       (1'b0),
       .cmd_valid_o         (sched_cmd_valid),
       .cmd_o               (sched_cmd),
       .cmd_bank_o          (sched_cmd_bank),
       .cmd_row_o           (sched_cmd_row),
       .cmd_col_o           (sched_cmd_col),
       .cmd_accepted_i      (cmd_accepted),
-      .bank_cmd_accepted_o (b_cmd_accept)
+      .bank_cmd_accepted_o (b_cmd_accept),
+      .qos_starvation_o    (qos_starvation_o)
   );
 
   assign cmd_valid_o = sched_cmd_valid;
