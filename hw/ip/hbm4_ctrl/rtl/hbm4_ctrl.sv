@@ -111,7 +111,25 @@ module hbm4_ctrl #(
     output logic training_done_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     output logic training_err_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     output hbm4_ctrl_pkg::train_state_e train_state_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
-    output logic                        qos_starvation_o [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                        qos_starvation_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    input  logic        ecc_ce_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        ecc_ue_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [3:0]  ecc_err_bank_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [15:0] ecc_err_addr_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        inject_ce_i    [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        inject_ue_i    [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic        ce_intr_o      [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic        ue_intr_o      [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        ce_clr_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        ue_clr_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [15:0] ce_count_o     [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [15:0] ue_count_o     [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic        ras_log_valid_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::ras_err_type_e ras_log_type_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [3:0]  ras_log_bank_o  [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [15:0] ras_log_addr_o  [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        ras_log_pop_i   [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
 );
 
   import hbm4_ctrl_pkg::*;
@@ -219,7 +237,24 @@ module hbm4_ctrl #(
           .training_done_o      (training_done_o[ch]),
           .training_err_o       (training_err_o[ch]),
           .train_state_o        (train_state_o[ch]),
-          .qos_starvation_o     (qos_starvation_o[ch])
+          .qos_starvation_o     (qos_starvation_o[ch]),
+          .ecc_ce_i             (ecc_ce_i[ch]),
+          .ecc_ue_i             (ecc_ue_i[ch]),
+          .ecc_err_bank_i       (ecc_err_bank_i[ch]),
+          .ecc_err_addr_i       (ecc_err_addr_i[ch]),
+          .inject_ce_i          (inject_ce_i[ch]),
+          .inject_ue_i          (inject_ue_i[ch]),
+          .ce_intr_o            (ce_intr_o[ch]),
+          .ue_intr_o            (ue_intr_o[ch]),
+          .ce_clr_i             (ce_clr_i[ch]),
+          .ue_clr_i             (ue_clr_i[ch]),
+          .ce_count_o           (ce_count_o[ch]),
+          .ue_count_o           (ue_count_o[ch]),
+          .ras_log_valid_o      (ras_log_valid_o[ch]),
+          .ras_log_type_o       (ras_log_type_o[ch]),
+          .ras_log_bank_o       (ras_log_bank_o[ch]),
+          .ras_log_addr_o       (ras_log_addr_o[ch]),
+          .ras_log_pop_i        (ras_log_pop_i[ch])
       );
     end
   endgenerate

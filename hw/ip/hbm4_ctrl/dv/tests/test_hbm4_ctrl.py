@@ -105,6 +105,15 @@ def _drive_all_inputs_idle(dut) -> None:
         _port(dut, "rdlvl_req_i", ch).value = 0
         _port(dut, "dfi_wrlvl_ack_i", ch).value = 0
         _port(dut, "dfi_rdlvl_ack_i", ch).value = 0
+        _port(dut, "ecc_ce_i", ch).value = 0
+        _port(dut, "ecc_ue_i", ch).value = 0
+        _port(dut, "ecc_err_bank_i", ch).value = 0
+        _port(dut, "ecc_err_addr_i", ch).value = 0
+        _port(dut, "inject_ce_i", ch).value = 0
+        _port(dut, "inject_ue_i", ch).value = 0
+        _port(dut, "ce_clr_i", ch).value = 0
+        _port(dut, "ue_clr_i", ch).value = 0
+        _port(dut, "ras_log_pop_i", ch).value = 0
 
 
 async def _tb_begin(dut, watchdog_cycles: int = 2000) -> None:
@@ -1192,3 +1201,116 @@ async def test_page_policy_open(dut) -> None:
             f"Read at 0x{addr:x} failed: {_port(dut, 'rresp_o', 0).value}"
         )
     _port(dut, "rready_i", 0).value = 0
+
+
+@cocotb.test()
+async def test_ras_ce_interrupt(dut) -> None:
+    """CE pulse via inject_ce_i asserts ce_intr_o next cycle."""
+    await _tb_begin(dut)
+
+    _port(dut, "inject_ce_i", 0).value = 1
+    _port(dut, "ecc_err_bank_i", 0).value = 3
+    _port(dut, "ecc_err_addr_i", 0).value = 0xABCD
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "inject_ce_i", 0).value = 0
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+
+    assert int(_port(dut, "ce_intr_o", 0).value) == 1, "CE interrupt should be latched"
+    assert int(_port(dut, "ce_count_o", 0).value) == 1, (
+        f"CE count should be 1, got {_port(dut, 'ce_count_o', 0).value}"
+    )
+
+
+@cocotb.test()
+async def test_ras_ue_interrupt(dut) -> None:
+    """UE pulse via inject_ue_i asserts ue_intr_o and increments ue_count_o."""
+    await _tb_begin(dut)
+
+    _port(dut, "inject_ue_i", 0).value = 1
+    _port(dut, "ecc_err_bank_i", 0).value = 7
+    _port(dut, "ecc_err_addr_i", 0).value = 0x1234
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "inject_ue_i", 0).value = 0
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+
+    assert int(_port(dut, "ue_intr_o", 0).value) == 1, "UE interrupt should be latched"
+    assert int(_port(dut, "ue_count_o", 0).value) == 1, (
+        f"UE count should be 1, got {_port(dut, 'ue_count_o', 0).value}"
+    )
+
+
+@cocotb.test()
+async def test_ras_interrupt_clear(dut) -> None:
+    """ce_clr_i deasserts ce_intr_o."""
+    await _tb_begin(dut)
+
+    _port(dut, "inject_ce_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "inject_ce_i", 0).value = 0
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    assert int(_port(dut, "ce_intr_o", 0).value) == 1
+
+    _port(dut, "ce_clr_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "ce_clr_i", 0).value = 0
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+
+    assert int(_port(dut, "ce_intr_o", 0).value) == 0, (
+        "CE interrupt should clear after ce_clr_i"
+    )
+
+
+@cocotb.test()
+async def test_ras_log_fifo(dut) -> None:
+    """Three CE errors produce three log entries readable in order."""
+    await _tb_begin(dut)
+
+    for bank in [2, 5, 9]:
+        _port(dut, "inject_ce_i", 0).value = 1
+        _port(dut, "ecc_err_bank_i", 0).value = bank
+        _port(dut, "ecc_err_addr_i", 0).value = bank * 0x100
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+        _port(dut, "inject_ce_i", 0).value = 0
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    for expected_bank in [2, 5, 9]:
+        assert int(_port(dut, "ras_log_valid_o", 0).value) == 1, "Log should have entries"
+        got_bank = int(_port(dut, "ras_log_bank_o", 0).value)
+        assert got_bank == expected_bank, f"Expected bank {expected_bank}, got {got_bank}"
+        _port(dut, "ras_log_pop_i", 0).value = 1
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+        _port(dut, "ras_log_pop_i", 0).value = 0
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    assert int(_port(dut, "ras_log_valid_o", 0).value) == 0, (
+        "Log should be empty after 3 pops"
+    )
+
+
+@cocotb.test()
+async def test_ras_ce_count_saturate(dut) -> None:
+    """CE counter increments monotonically (saturation checked by P8.F4)."""
+    await _tb_begin(dut)
+
+    for _ in range(5):
+        _port(dut, "inject_ce_i", 0).value = 1
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+        _port(dut, "inject_ce_i", 0).value = 0
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    count = int(_port(dut, "ce_count_o", 0).value)
+    assert count == 5, f"Expected count=5, got {count}"

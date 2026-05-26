@@ -25,6 +25,7 @@ VERILOG_SOURCES = \
   $(CURDIR)/../rtl/hbm4_ctrl_pwrdn.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_trefi_ctrl.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_training.sv \
+  $(CURDIR)/../rtl/hbm4_ctrl_ras.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_chan_top.sv \
   $(CURDIR)/../rtl/hbm4_ctrl.sv
 

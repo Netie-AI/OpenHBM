@@ -32,7 +32,11 @@ module hbm4_ctrl_abs #(
     input logic                    dfi_wrlvl_req_o,
     input logic                    dfi_rdlvl_req_o,
     input logic                    dfi_wrlvl_ack_i,
-    input logic                    dfi_rdlvl_ack_i
+    input logic                    dfi_rdlvl_ack_i,
+    input logic                    ecc_ce_i,
+    input logic                    ecc_ue_i,
+    input logic                    ce_clr_i,
+    input logic                    ue_clr_i
 );
 
   assume property (@(posedge clk_i) disable iff (!rst_ni) !$isunknown(awvalid_i));
@@ -91,6 +95,12 @@ module hbm4_ctrl_abs #(
       awvalid_i && !awready_i |-> $stable(awqos_i));
   assume property (@(posedge clk_i) disable iff (!rst_ni)
       arvalid_i && !arready_i |-> $stable(arqos_i));
+
+  assume property (@(posedge clk_i) disable iff (!rst_ni) ecc_ce_i |=> !ecc_ce_i);
+  assume property (@(posedge clk_i) disable iff (!rst_ni) ecc_ue_i |=> !ecc_ue_i);
+  assume property (@(posedge clk_i) disable iff (!rst_ni) !(ecc_ce_i && ecc_ue_i));
+  assume property (@(posedge clk_i) disable iff (!rst_ni) ce_clr_i |=> !ce_clr_i);
+  assume property (@(posedge clk_i) disable iff (!rst_ni) ue_clr_i |=> !ue_clr_i);
 
 endmodule : hbm4_ctrl_abs
 

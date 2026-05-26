@@ -113,7 +113,25 @@ module hbm4_ctrl_chan_top #(
     output logic                                       training_err_o,
     output hbm4_ctrl_pkg::train_state_e                train_state_o,
 
-    output logic                                       qos_starvation_o
+    output logic                                       qos_starvation_o,
+
+    input  logic                                       ecc_ce_i,
+    input  logic                                       ecc_ue_i,
+    input  logic [3:0]                                 ecc_err_bank_i,
+    input  logic [15:0]                                ecc_err_addr_i,
+    input  logic                                       inject_ce_i,
+    input  logic                                       inject_ue_i,
+    output logic                                       ce_intr_o,
+    output logic                                       ue_intr_o,
+    input  logic                                       ce_clr_i,
+    input  logic                                       ue_clr_i,
+    output logic [15:0]                                ce_count_o,
+    output logic [15:0]                                ue_count_o,
+    output logic                                       ras_log_valid_o,
+    output hbm4_ctrl_pkg::ras_err_type_e               ras_log_type_o,
+    output logic [3:0]                                 ras_log_bank_o,
+    output logic [15:0]                                ras_log_addr_o,
+    input  logic                                       ras_log_pop_i
 );
 
   import hbm4_ctrl_pkg::*;
@@ -406,6 +424,31 @@ module hbm4_ctrl_chan_top #(
 
   assign fpv_bank0_state_o   = b_bank_state[0];
   assign fpv_bank0_ras_cnt_o = b_ras_dbg[0];
+
+  hbm4_ctrl_ras #(
+      .NUM_BANKS (NumB),
+      .INJECT_EN (1'b1)
+  ) u_ras (
+      .clk_i        (clk_i),
+      .rst_ni       (rst_ni),
+      .ce_i         (ecc_ce_i),
+      .ue_i         (ecc_ue_i),
+      .err_bank_i   (ecc_err_bank_i),
+      .err_addr_i   (ecc_err_addr_i),
+      .inject_ce_i  (inject_ce_i),
+      .inject_ue_i  (inject_ue_i),
+      .ce_intr_o    (ce_intr_o),
+      .ue_intr_o    (ue_intr_o),
+      .ce_clr_i     (ce_clr_i),
+      .ue_clr_i     (ue_clr_i),
+      .ce_count_o   (ce_count_o),
+      .ue_count_o   (ue_count_o),
+      .log_valid_o  (ras_log_valid_o),
+      .log_type_o   (ras_log_type_o),
+      .log_bank_o   (ras_log_bank_o),
+      .log_addr_o   (ras_log_addr_o),
+      .log_pop_i    (ras_log_pop_i)
+  );
 
 endmodule : hbm4_ctrl_chan_top
 

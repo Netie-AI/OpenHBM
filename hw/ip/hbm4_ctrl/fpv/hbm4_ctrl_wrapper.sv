@@ -239,6 +239,23 @@ module hbm4_ctrl_fpv_wrapper;
   logic                  training_err_arr [0:0];
   hbm4_ctrl_pkg::train_state_e train_state_arr [0:0];
   logic                        qos_starvation_arr [0:0];
+  logic                        ecc_ce_arr [0:0];
+  logic                        ecc_ue_arr [0:0];
+  logic [3:0]                  ecc_err_bank_arr [0:0];
+  logic [15:0]                 ecc_err_addr_arr [0:0];
+  logic                        inject_ce_arr [0:0];
+  logic                        inject_ue_arr [0:0];
+  logic                        ce_intr_arr [0:0];
+  logic                        ue_intr_arr [0:0];
+  logic                        ce_clr_arr [0:0];
+  logic                        ue_clr_arr [0:0];
+  logic [15:0]                 ce_count_arr [0:0];
+  logic [15:0]                 ue_count_arr [0:0];
+  logic                        ras_log_valid_arr [0:0];
+  hbm4_ctrl_pkg::ras_err_type_e ras_log_type_arr [0:0];
+  logic [3:0]                  ras_log_bank_arr [0:0];
+  logic [15:0]                 ras_log_addr_arr [0:0];
+  logic                        ras_log_pop_arr [0:0];
 
   assign dfi_wrdata_ack_i     = 1'b1;
   assign dfi_rddata_i         = '0;
@@ -275,6 +292,13 @@ module hbm4_ctrl_fpv_wrapper;
   assign rdlvl_req_arr[0]    = rdlvl_req_i;
   assign dfi_wrlvl_ack_arr[0] = dfi_wrlvl_ack_i;
   assign dfi_rdlvl_ack_arr[0] = dfi_rdlvl_ack_i;
+  assign ecc_err_bank_arr[0]  = 4'd0;
+  assign ecc_err_addr_arr[0]  = 16'd0;
+  assign inject_ce_arr[0]     = 1'b0;
+  assign inject_ue_arr[0]     = 1'b0;
+  assign ce_clr_arr[0]        = 1'b0;
+  assign ue_clr_arr[0]        = 1'b0;
+  assign ras_log_pop_arr[0]   = 1'b0;
 
   assign awready_o   = awready_arr[0];
   assign wready_o    = wready_arr[0];
@@ -406,7 +430,24 @@ module hbm4_ctrl_fpv_wrapper;
       .training_done_o      (training_done_arr),
       .training_err_o       (training_err_arr),
       .train_state_o        (train_state_arr),
-      .qos_starvation_o     (qos_starvation_arr)
+      .qos_starvation_o     (qos_starvation_arr),
+      .ecc_ce_i             (ecc_ce_arr),
+      .ecc_ue_i             (ecc_ue_arr),
+      .ecc_err_bank_i       (ecc_err_bank_arr),
+      .ecc_err_addr_i       (ecc_err_addr_arr),
+      .inject_ce_i          (inject_ce_arr),
+      .inject_ue_i          (inject_ue_arr),
+      .ce_intr_o            (ce_intr_arr),
+      .ue_intr_o            (ue_intr_arr),
+      .ce_clr_i             (ce_clr_arr),
+      .ue_clr_i             (ue_clr_arr),
+      .ce_count_o           (ce_count_arr),
+      .ue_count_o           (ue_count_arr),
+      .ras_log_valid_o      (ras_log_valid_arr),
+      .ras_log_type_o       (ras_log_type_arr),
+      .ras_log_bank_o       (ras_log_bank_arr),
+      .ras_log_addr_o       (ras_log_addr_arr),
+      .ras_log_pop_i        (ras_log_pop_arr)
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_train_ack
@@ -446,7 +487,11 @@ module hbm4_ctrl_fpv_wrapper;
       .awqos_i             (awqos_i),
       .arqos_i             (arqos_i),
       .awready_i           (awready_o),
-      .arready_i           (arready_o)
+      .arready_i           (arready_o),
+      .ecc_ce_i            (ecc_ce_arr[0]),
+      .ecc_ue_i            (ecc_ue_arr[0]),
+      .ce_clr_i            (ce_clr_arr[0]),
+      .ue_clr_i            (ue_clr_arr[0])
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_cyc_act
@@ -620,6 +665,30 @@ module hbm4_ctrl_fpv_wrapper;
        hbm4_ctrl_pkg::QosStarvationLimit);
   endproperty
   P7F4_starvation_signal: assert property (p7_starvation_signal);
+
+  property p8_ce_intr_latches;
+    @(posedge clk_i) disable iff (!rst_ni)
+    $rose(ecc_ce_arr[0]) |=> ce_intr_arr[0];
+  endproperty
+  P8F1_ce_intr: assert property (p8_ce_intr_latches);
+
+  property p8_ue_intr_latches;
+    @(posedge clk_i) disable iff (!rst_ni)
+    $rose(ecc_ue_arr[0]) |=> ue_intr_arr[0];
+  endproperty
+  P8F2_ue_intr: assert property (p8_ue_intr_latches);
+
+  property p8_ce_count_monotone;
+    @(posedge clk_i) disable iff (!rst_ni)
+    !ce_clr_arr[0] |-> ce_count_arr[0] >= $past(ce_count_arr[0]);
+  endproperty
+  P8F3_ce_monotone: assert property (p8_ce_count_monotone);
+
+  property p8_ce_no_wrap;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (ce_count_arr[0] == 16'hFFFF) |=> (ce_count_arr[0] == 16'hFFFF);
+  endproperty
+  P8F4_ce_no_wrap: assert property (p8_ce_no_wrap);
 
 endmodule : hbm4_ctrl_fpv_wrapper
 

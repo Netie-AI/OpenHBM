@@ -101,4 +101,14 @@ package hbm4_ctrl_pkg;
   // Starvation guard: P3 guaranteed 1 slot per N rounds
   localparam int unsigned QosStarvationLimit = 64;  // verilog_lint: waive parameter-name-style -- P3 guard
 
+  // P8 — RAS / error types
+  typedef enum logic [1:0] {
+    ERR_NONE = 2'd0,
+    ERR_CE   = 2'd1,
+    ERR_UE   = 2'd2
+  } ras_err_type_e;
+
+  localparam int unsigned RAS_LOG_DEPTH = 8;   // verilog_lint: waive parameter-name-style -- P8 log FIFO depth
+  localparam int unsigned RAS_CTR_W     = 16;  // verilog_lint: waive parameter-name-style -- P8 counter width
+
 endpackage : hbm4_ctrl_pkg
