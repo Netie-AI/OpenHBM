@@ -111,4 +111,16 @@ package hbm4_ctrl_pkg;
   localparam int unsigned RAS_LOG_DEPTH = 8;   // verilog_lint: waive parameter-name-style -- P8 log FIFO depth
   localparam int unsigned RAS_CTR_W     = 16;  // verilog_lint: waive parameter-name-style -- P8 counter width
 
+  // P10 — PMU telemetry and control
+  typedef enum logic [1:0] {
+    PMU_NORMAL   = 2'd0,
+    PMU_THROTTLE = 2'd1,
+    PMU_GATED    = 2'd2
+  } pmu_state_e;
+
+  localparam int unsigned PmuWindow    = 1024;  // verilog_lint: waive parameter-name-style -- activity window
+  localparam int unsigned PmuThreshold = 768;   // verilog_lint: waive parameter-name-style -- 75% → throttle
+  localparam int unsigned PmuIdleCnt   = 256;   // verilog_lint: waive parameter-name-style -- idle → gated
+  localparam int unsigned PmuCtrW      = 11;    // verilog_lint: waive parameter-name-style -- holds PmuWindow
+
 endpackage : hbm4_ctrl_pkg

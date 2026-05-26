@@ -690,6 +690,43 @@ module hbm4_ctrl_fpv_wrapper;
   endproperty
   P8F4_ce_no_wrap: assert property (p8_ce_no_wrap);
 
+  // P10.F1 — throttle only asserts in THROTTLE state
+  property p10_throttle_in_state;
+    @(posedge clk_i) disable iff (!rst_ni)
+    dut.throttle_o[0] |->
+      (dut.g_channel[0].u_chan.u_pmu.pmu_state_o == hbm4_ctrl_pkg::PMU_THROTTLE);
+  endproperty
+  P10F1_throttle_state: assert property (p10_throttle_in_state);
+
+  // P10.F2 — pwrdn_req from PMU only in GATED state
+  property p10_pmu_pwrdn_in_gated;
+    @(posedge clk_i) disable iff (!rst_ni)
+    dut.g_channel[0].u_chan.u_pmu.pwrdn_req_o |->
+      (dut.g_channel[0].u_chan.u_pmu.pmu_state_o == hbm4_ctrl_pkg::PMU_GATED);
+  endproperty
+  P10F2_pmu_pwrdn: assert property (p10_pmu_pwrdn_in_gated);
+
+  // P10.F3 — activity counter never exceeds PMU_WINDOW
+  property p10_activity_bounded;
+    @(posedge clk_i) disable iff (!rst_ni)
+    dut.g_channel[0].u_chan.u_pmu.active_cnt_q <= hbm4_ctrl_pkg::PmuWindow;
+  endproperty
+  P10F3_activity_bounded: assert property (p10_activity_bounded);
+
+  // P10.F4 — GATED exits immediately on cmd_valid
+  property p10_gated_exit_on_cmd;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (dut.g_channel[0].u_chan.u_pmu.pmu_state_o == hbm4_ctrl_pkg::PMU_GATED) &&
+    dut.g_channel[0].u_chan.u_pmu.cmd_valid_i |=>
+    (dut.g_channel[0].u_chan.u_pmu.pmu_state_o == hbm4_ctrl_pkg::PMU_NORMAL);
+  endproperty
+  P10F4_gated_exit: assert property (p10_gated_exit_on_cmd);
+
+  assume property (@(posedge clk_i) disable iff (!rst_ni)
+      $stable(dut.g_channel[0].u_chan.u_pmu.window_cnt_q) |->
+      dut.g_channel[0].u_chan.u_pmu.window_cnt_q <=
+        hbm4_ctrl_pkg::PmuCtrW'(hbm4_ctrl_pkg::PmuWindow));
+
 endmodule : hbm4_ctrl_fpv_wrapper
 
 `default_nettype wire

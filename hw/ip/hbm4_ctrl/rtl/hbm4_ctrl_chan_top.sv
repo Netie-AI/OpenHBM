@@ -115,6 +115,10 @@ module hbm4_ctrl_chan_top #(
 
     output logic                                       qos_starvation_o,
 
+    output hbm4_ctrl_pkg::pmu_state_e                  pmu_state_o,
+    output logic                                       throttle_o,
+    output logic [10:0]                                pmu_activity_cnt_o,
+
     input  logic                                       ecc_ce_i,
     input  logic                                       ecc_ue_i,
     input  logic [3:0]                                 ecc_err_bank_i,
@@ -159,6 +163,13 @@ module hbm4_ctrl_chan_top #(
 
   logic cmd_fire;
   assign cmd_fire = sched_cmd_valid;
+
+  logic                    pmu_pwrdn_req;
+  logic                    pmu_sref_req;
+  logic                    pmu_page_policy;
+  logic                    pmu_throttle;
+  pmu_state_e              pmu_state;
+  logic [PmuCtrW-1:0]      pmu_activity_cnt;
 
   hbm4_ctrl_axi4_slave #(
       .P_AXI_ID_W(AXI_ID_W),
@@ -246,6 +257,9 @@ module hbm4_ctrl_chan_top #(
       .temp_band_o    (temp_band)
   );
 
+  // P5: trefi_cycles_o exposed at top for future refresh_mgr integration.
+  // When refresh_mgr is instantiated here, connect its trefi_i to trefi_cycles
+  // (from u_trefi_ctrl). Current DRFM timer uses hardcoded 240-cycle period.
   assign trefi_cycles_o = trefi_cycles;
   assign temp_band_o    = temp_band;
 
@@ -296,8 +310,8 @@ module hbm4_ctrl_chan_top #(
       .clk_i                (clk_i),
       .rst_ni               (rst_ni),
       .bank_idle_i          (bank_idle_bus),
-      .pwrdn_req_i          (pwrdn_req_i),
-      .sref_req_i           (sref_req_i),
+      .pwrdn_req_i          (pwrdn_req_i | pmu_pwrdn_req),
+      .sref_req_i           (sref_req_i | pmu_sref_req),
       .exit_req_i           (exit_req_i),
       .dfi_lp_ctrl_req_o    (dfi_lp_ctrl_req_o),
       .dfi_lp_ctrl_wakeup_o (dfi_lp_ctrl_wakeup_o),
@@ -353,7 +367,7 @@ module hbm4_ctrl_chan_top #(
       .bank_cmd_row_i      (b_cmd_row),
       .bank_cmd_col_i      (b_cmd_col),
       .bank_qos_i          (bank_qos),
-      .page_policy_i       (1'b0),
+      .page_policy_i       (pmu_page_policy),
       .cmd_valid_o         (sched_cmd_valid),
       .cmd_o               (sched_cmd),
       .cmd_bank_o          (sched_cmd_bank),
@@ -369,6 +383,22 @@ module hbm4_ctrl_chan_top #(
   assign cmd_bank_o  = sched_cmd_bank;
   assign cmd_row_o   = sched_cmd_row;
   assign cmd_col_o   = sched_cmd_col;
+
+  hbm4_ctrl_pmu u_pmu (
+      .clk_i           (clk_i),
+      .rst_ni          (rst_ni),
+      .cmd_valid_i     (sched_cmd_valid),
+      .pwrdn_req_o     (pmu_pwrdn_req),
+      .sref_req_o      (pmu_sref_req),
+      .page_policy_o   (pmu_page_policy),
+      .throttle_o      (pmu_throttle),
+      .activity_cnt_o  (pmu_activity_cnt),
+      .pmu_state_o     (pmu_state)
+  );
+
+  assign pmu_state_o         = pmu_state;
+  assign throttle_o          = pmu_throttle;
+  assign pmu_activity_cnt_o  = pmu_activity_cnt;
 
   hbm4_ctrl_dfi_bridge #(
       .NUM_BANKS    (NumB),
@@ -425,6 +455,8 @@ module hbm4_ctrl_chan_top #(
   assign fpv_bank0_state_o   = b_bank_state[0];
   assign fpv_bank0_ras_cnt_o = b_ras_dbg[0];
 
+  // Future: wire hw/ip/ecc/ecc.sv ce_o/ue_o to ecc_ce_i/ecc_ue_i when ECC IP is
+  // instantiated in the channel datapath.
   hbm4_ctrl_ras #(
       .NUM_BANKS (NumB),
       .INJECT_EN (1'b1)

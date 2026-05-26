@@ -26,6 +26,7 @@ VERILOG_SOURCES = \
   $(CURDIR)/../rtl/hbm4_ctrl_trefi_ctrl.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_training.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_ras.sv \
+  $(CURDIR)/../rtl/hbm4_ctrl_pmu.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_chan_top.sv \
   $(CURDIR)/../rtl/hbm4_ctrl.sv \
   $(CURDIR)/model/hbm4_phy_model.sv \
@@ -40,8 +41,27 @@ EXTRA_ARGS += -Wno-fatal -GNUM_CHANNELS=$(NUM_CHANNELS) \
 
 CUSTOM_COMPILE_DEPS += $(CURDIR)/Makefile
 
+# Pre-flight: fail fast if oss-cad verilator is not on PATH
+.PHONY: check-env
+check-env:
+	@which verilator | grep -q oss-cad || \
+	  (echo "ERROR: oss-cad verilator not on PATH. Run:" && \
+	   echo "  source ~/oss-cad-suite/environment" && \
+	   echo "  source ~/OpenHBM/.venv/bin/activate" && \
+	   exit 1)
+	@echo "Environment OK: $$(verilator --version | head -1)"
+
+.PHONY: clean-results
+clean-results:
+	rm -f results.xml
+	rm -rf sim_build
+
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
+.DEFAULT_GOAL := all
+
+sim: check-env
+$(COCOTB_RESULTS_FILE): check-env
 sim: export PYTHONPATH := $(CURDIR)/tests:$(PYTHONPATH)
 
 .PHONY: elab-multichan test-multichan

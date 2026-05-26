@@ -113,6 +113,10 @@ module hbm4_ctrl #(
     output hbm4_ctrl_pkg::train_state_e train_state_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     output logic                        qos_starvation_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
 
+    output hbm4_ctrl_pkg::pmu_state_e   pmu_state_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                        throttle_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [10:0]                 pmu_activity_cnt_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
     input  logic        ecc_ce_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     input  logic        ecc_ue_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
     input  logic [3:0]  ecc_err_bank_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
@@ -238,6 +242,9 @@ module hbm4_ctrl #(
           .training_err_o       (training_err_o[ch]),
           .train_state_o        (train_state_o[ch]),
           .qos_starvation_o     (qos_starvation_o[ch]),
+          .pmu_state_o          (pmu_state_o[ch]),
+          .throttle_o           (throttle_o[ch]),
+          .pmu_activity_cnt_o   (pmu_activity_cnt_o[ch]),
           .ecc_ce_i             (ecc_ce_i[ch]),
           .ecc_ue_i             (ecc_ue_i[ch]),
           .ecc_err_bank_i       (ecc_err_bank_i[ch]),
