@@ -27,7 +27,9 @@ VERILOG_SOURCES = \
   $(CURDIR)/../rtl/hbm4_ctrl_training.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_ras.sv \
   $(CURDIR)/../rtl/hbm4_ctrl_chan_top.sv \
-  $(CURDIR)/../rtl/hbm4_ctrl.sv
+  $(CURDIR)/../rtl/hbm4_ctrl.sv \
+  $(CURDIR)/model/hbm4_phy_model.sv \
+  $(CURDIR)/model/hbm4_dram_model.sv
 
 COMPILE_ARGS += --threads 20
 NUM_CHANNELS ?= 1

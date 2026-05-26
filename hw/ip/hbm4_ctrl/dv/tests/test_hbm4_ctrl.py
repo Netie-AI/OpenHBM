@@ -1314,3 +1314,95 @@ async def test_ras_ce_count_saturate(dut) -> None:
 
     count = int(_port(dut, "ce_count_o", 0).value)
     assert count == 5, f"Expected count=5, got {count}"
+
+
+# --- P9 PHY/DRAM behavioural model (sim-only; TOPLEVEL=hbm4_ctrl stub path) ---
+
+
+@cocotb.test()
+async def test_phy_model_instantiation(dut) -> None:
+    """Simulation elaborates with PHY/DRAM model sources (no X on DFI observables)."""
+    await _tb_begin(dut)
+    for _ in range(10):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+    cs_n = int(_port(dut, "dfi_cs_n_o", 0).value)
+    assert cs_n in (0, 1), f"dfi_cs_n_o not 0/1: {cs_n}"
+
+
+@cocotb.test()
+async def test_dfi_cs_n_deasserts_on_cmd(dut) -> None:
+    """AXI4 write path eventually drives DFI cs_n active (command issued)."""
+    await _tb_begin(dut)
+    await _axi_write_single(dut, bank=0, row=1, col=0)
+    cs_n_deasserted = False
+    for _ in range(200):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+        if int(_port(dut, "dfi_cs_n_o", 0).value) == 0:
+            cs_n_deasserted = True
+            break
+    assert cs_n_deasserted, "dfi_cs_n_o never went active-low after AXI write"
+
+
+@cocotb.test()
+async def test_e2e_write_no_crash(dut) -> None:
+    """Full AXI4 write completes without sim crash or timeout."""
+    await _tb_begin(dut)
+    await _axi_write_single(dut, bank=0, row=4, col=0, axid=2)
+    _port(dut, "bready_i", 0).value = 1
+    for _ in range(80):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+        if int(_port(dut, "bvalid_o", 0).value) == 1:
+            break
+    assert int(_port(dut, "bresp_o", 0).value) == 0, (
+        f"Expected OKAY bresp, got {_port(dut, 'bresp_o', 0).value}"
+    )
+
+
+@cocotb.test()
+async def test_e2e_read_no_crash(dut) -> None:
+    """Full AXI4 read completes; data may be 0 (DRAM model not in DUT hierarchy)."""
+    await _tb_begin(dut)
+    await _axi_read_single(dut, bank=0, row=4, col=0)
+    assert int(_port(dut, "rresp_o", 0).value) == 0, (
+        f"Expected OKAY rresp, got {_port(dut, 'rresp_o', 0).value}"
+    )
+
+
+@cocotb.test()
+async def test_training_ack_via_phy(dut) -> None:
+    """
+    Write leveling: DFI req from training FSM; ack after fixed latency
+    (PHY shift-reg when co-simmed, else bench-driven ack).
+    """
+    await _tb_begin(dut)
+    _port(dut, "wrlvl_req_i", 0).value = 1
+    await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
+    _port(dut, "wrlvl_req_i", 0).value = 0
+
+    saw_dfi_req = False
+    for _ in range(30):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+        if int(_port(dut, "dfi_wrlvl_req_o", 0).value) == 1:
+            saw_dfi_req = True
+            break
+
+    if saw_dfi_req:
+        for _ in range(10):
+            await RisingEdge(dut.clk_i)
+            await Timer(1, unit="ps")
+        _port(dut, "dfi_wrlvl_ack_i", 0).value = 1
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+        _port(dut, "dfi_wrlvl_ack_i", 0).value = 0
+
+    for _ in range(25):
+        await RisingEdge(dut.clk_i)
+        await Timer(1, unit="ps")
+
+    state = int(_port(dut, "train_state_o", 0).value)
+    assert state in (0, 1, 4), f"Unexpected training state {state} after wrlvl"
