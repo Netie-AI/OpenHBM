@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import os
 import sys
-
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -20,7 +19,7 @@ from cocotb.triggers import RisingEdge, Timer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "env"))
 
-from refresh_mgr_ref import RefreshMgrRef  # noqa: E402
+from refresh_mgr_ref import RefreshMgrRef
 
 COV: dict[str, dict[str, int]] = {}
 
@@ -96,6 +95,7 @@ async def _step(
     dut.credit_release_i.value = rel
     dut.drfm_ack_i.value = ack
     await RisingEdge(dut.clk_i)
+    await Timer(1, unit="ps")
     g_bg, g_ba, g_row, g_pend, g_ov = m.step(
         trefw_tick=bool(tick),
         act_valid=bool(act),
@@ -105,11 +105,21 @@ async def _step(
         credit_release=bool(rel),
         drfm_ack=bool(ack),
     )
-    assert int(dut.drfm_pending_o.value) == int(g_pend)
-    assert int(dut.prac_overflow_alert_o.value) == int(g_ov)
-    assert int(dut.drfm_target_bg_o.value) == g_bg
-    assert int(dut.drfm_target_ba_o.value) == g_ba
-    assert int(dut.drfm_target_row_o.value) == g_row
+    assert int(dut.drfm_pending_o.value) == int(g_pend), (
+        f"pending rtl={int(dut.drfm_pending_o.value)} m={int(g_pend)}"
+    )
+    assert int(dut.prac_overflow_alert_o.value) == int(g_ov), (
+        f"overflow rtl={int(dut.prac_overflow_alert_o.value)} m={int(g_ov)}"
+    )
+    assert int(dut.drfm_target_bg_o.value) == g_bg, (
+        f"bg rtl={int(dut.drfm_target_bg_o.value)} m={g_bg}"
+    )
+    assert int(dut.drfm_target_ba_o.value) == g_ba, (
+        f"ba rtl={int(dut.drfm_target_ba_o.value)} m={g_ba}"
+    )
+    assert int(dut.drfm_target_row_o.value) == g_row, (
+        f"row rtl={int(dut.drfm_target_row_o.value)} m={g_row}"
+    )
 
 
 async def _run_sixteen_high_hammer(dut) -> None:
@@ -122,14 +132,14 @@ async def _run_sixteen_high_hammer(dut) -> None:
     m = _model()
     await _reset(dut)
     seen = False
-    for cy in range(thr * 24):
+    # Budget scales with threshold; extra headroom for ack+re-arm cycles.
+    for cy in range(max(thr * 64, 512)):
         rr = row_lo if (cy % 2 == 0) else row_hi
         pend = int(dut.drfm_pending_o.value)
         await _step(dut, m, act=1, bg=bg, ba=ba, row=rr, ack=pend)
 
         pend = int(dut.drfm_pending_o.value)
         ov = int(dut.prac_overflow_alert_o.value)
-
 
         if pend or ov:
             seen = True
@@ -143,7 +153,6 @@ async def test_sixteen_high_hammer_pressure(dut) -> None:
     cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
     _touch("adv", "hammer_start")
 
-
     await _run_sixteen_high_hammer(dut)
     _write_coverage()
 
@@ -153,21 +162,16 @@ async def test_trace_rowhammer_replay_if_present(dut) -> None:
     cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
     _touch("adv", "replay_entry")
 
-
     if not TRACE.exists():
-
         cocotb.log.info("%s absent — rerunning synthesized hammer workload", TRACE)
         await _run_sixteen_high_hammer(dut)
         _touch("adv", "trace_missing_fallback")
         _write_coverage()
 
-
         return
 
     m = _model()
     await _reset(dut)
-
-
 
     triples = []
     for raw in TRACE.read_text(encoding="utf-8").splitlines():
@@ -195,7 +199,6 @@ async def test_trace_rowhammer_replay_if_present(dut) -> None:
 
     ck = int(os.environ.get("TRACE_TICK_PERIOD", "31"))
     for i, triple in enumerate(triples):
-
         tg, tb, rr = triple
         tick_pulse = ck > 0 and (i % ck == 0)
         pend = int(dut.drfm_pending_o.value)

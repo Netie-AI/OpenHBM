@@ -24,9 +24,10 @@ def stage_formal(ctx: StageContext) -> StageResult:
     detail_lines: list[str] = []
     for sby in sbys:
         total += 1
-        rc, out, err = run(
-            ["sby", "-f", str(sby)],
-            cwd=ctx.work,
+        # Run sby from repo root so [files] paths stay repo-root-relative (not harness tmp cwd).
+        rc, _out, _err = run(
+            ["sby", "-f", str(sby.relative_to(ctx.repo_root))],
+            cwd=ctx.repo_root,
             timeout=3600,
         )
         ok = rc == 0

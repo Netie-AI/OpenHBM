@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-project   = "Netie Open HBM"
+project = "Netie Open HBM"
 copyright = "2026, The Netie Open HBM Authors"
-author    = "The Netie Open HBM Authors"
-release   = "0.0.1"
+author = "The Netie Open HBM Authors"
+release = "0.0.1"
 
 extensions = [
     "myst_parser",
@@ -16,7 +16,7 @@ extensions = [
 
 source_suffix = {
     ".rst": "restructuredtext",
-    ".md":  "markdown",
+    ".md": "markdown",
 }
 
 myst_enable_extensions = [
@@ -26,11 +26,11 @@ myst_enable_extensions = [
     "colon_fence",
 ]
 
-html_theme        = "sphinx_rtd_theme"
-html_title        = "Netie Open HBM"
-html_static_path  = ["_static"]
-templates_path    = ["_templates"]
-exclude_patterns  = ["_build", "Thumbs.db", ".DS_Store"]
+html_theme = "sphinx_rtd_theme"
+html_title = "Netie Open HBM"
+html_static_path = ["_static"]
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

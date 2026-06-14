@@ -77,7 +77,7 @@ module refresh_mgr #(
           hit  = 1'b1;
           hbi  = bk;
           hrow = mem[bk][sj].row;
-          hba  = ba_t'(bk[BaW - 1:0]);
+          hba  = ba_t'(bk);
           hbg  = bg_t'(bk >> BaW);
         end
       end
@@ -173,36 +173,36 @@ module refresh_mgr #(
 
       prac_overflow_alert_o <= 1'b0;
     end else begin : clk_step_gen
-      automatic logic hit_pre_v;
-      automatic bg_t hit_pre_bg;
-      automatic ba_t hit_pre_ba;
-      automatic logic [RowW - 1:0] hit_pre_row;
-      automatic int unsigned hit_pre_bi;
+      logic hit_pre_v;
+      bg_t hit_pre_bg;
+      ba_t hit_pre_ba;
+      logic [RowW - 1:0] hit_pre_row;
+      int unsigned hit_pre_bi;
 
-      automatic logic start_pend;
-      automatic int unsigned bk_ix;
+      logic start_pend;
+      int unsigned bk_ix;
 
-      automatic int unsigned rb_ix;
-      automatic logic hit_post_v;
+      int unsigned rb_ix;
+      logic hit_post_v;
 
-      automatic bg_t hp_bg;
-      automatic ba_t hp_ba;
-      automatic logic [RowW - 1:0] hp_row;
-      automatic int unsigned hp_bi;
+      bg_t hp_bg;
+      ba_t hp_ba;
+      logic [RowW - 1:0] hp_row;
+      int unsigned hp_bi;
 
-      automatic logic hit_ov_v;
-      automatic logic [BgW - 1:0] ov_bg;
-      automatic ba_t ov_ba;
-      automatic logic [RowW - 1:0] ov_row;
-      automatic int unsigned ov_bi;
+      logic hit_ov_v;
+      logic [BgW - 1:0] ov_bg;
+      ba_t ov_ba;
+      logic [RowW - 1:0] ov_row;
+      int unsigned ov_bi;
 
-      automatic prac_slot_t wq[NumBanks][PracTopK];
-      automatic logic [CountW - 1:0] nc[NumBanks];
+      prac_slot_t wq[NumBanks][PracTopK];
+      logic [CountW - 1:0] nc[NumBanks];
 
-      automatic logic pend_nxt;
-      automatic bg_t nlat_bg;
-      automatic ba_t nlat_ba;
-      automatic logic [RowW - 1:0] nlat_rw;
+      logic pend_nxt;
+      bg_t nlat_bg;
+      ba_t nlat_ba;
+      logic [RowW - 1:0] nlat_rw;
 
       // --- working copy ---
       scan_hit_mem(mem_q, hit_pre_v, hit_pre_bg, hit_pre_ba, hit_pre_bi, hit_pre_row);
@@ -308,6 +308,6 @@ module refresh_mgr #(
       @(posedge clk_i) disable iff (!rst_ni)
       prac_overflow_alert_o);
 
-`endif
+`endif // SYNTHESIS
 
 endmodule : refresh_mgr

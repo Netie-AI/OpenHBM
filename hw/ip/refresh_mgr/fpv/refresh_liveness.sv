@@ -49,6 +49,25 @@ module refresh_mgr_liveness_wrapper;
 
   logic [15:0]         pend_streak;
 
+`ifndef OPENHBM_FPV
+  initial begin : g_clk_gen
+    clk_i = 1'b0;
+    forever #5 clk_i = ~clk_i;
+  end
+`endif
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : g_ph
+    if (!rst_ni) begin
+      ph <= '0;
+    end else if (ph == 8'(T_REFI_CYCLES - 1)) begin
+      ph <= '0;
+    end else begin
+      ph <= ph + 8'h1;
+    end
+  end
+
+  assign trefw_tick_i = rst_ni && (ph == 8'h0);
+
   refresh_mgr #(
       .PracThresh(FormalThresh),
       .PracTopK  (FormalK),
@@ -79,78 +98,23 @@ module refresh_mgr_liveness_wrapper;
       .prac_overflow_alert_o(prac_overflow_alert_o)
   );
 
-
-  initial begin : g_clk_gen
-    clk_i = 1'b0;
-
-
-
-    forever #5 clk_i = ~clk_i;
-  end
-
-
-
-  assign trefw_tick_i = rst_ni && (ph == 8'h0);
-
-
-
+`ifndef OPENHBM_FPV
   initial begin : g_boot
-
     rst_ni = 1'b0;
-
-
-
     @(posedge clk_i);
     @(posedge clk_i);
-
-
-
     rst_ni = 1'b1;
-
-
-
   end
-
-  always_ff @(posedge clk_i or negedge rst_ni) begin : g_ph
-    if (!rst_ni) begin
-
-
-
-
-      ph <= '0;
-
-
-
-    end else if (ph == 8'(T_REFI_CYCLES - 1)) begin
-      ph <= '0;
-
-
-
-    end else begin
-      ph <= ph + 8'h1;
-    end
-
-
-
-
-  end
+`else
+  initial rst_ni = 1'b1;
+`endif
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : g_penstr
     if (!rst_ni) begin
-
-
-
-
       pend_streak <= '0;
     end else if (drfm_pending_o && !drfm_ack_i) begin
       pend_streak <= pend_streak + 16'h1;
-
-
-
     end else pend_streak <= '0;
-
-
-
   end
 
 

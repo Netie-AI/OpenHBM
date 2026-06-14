@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<coverage><coverpoint name="adv"><bin name="hammer_start" hits="1" /><bin name="defense_trigger" hits="1" /><bin name="replay_entry" hits="1" /><bin name="trace_replay_done" hits="1" /></coverpoint></coverage>

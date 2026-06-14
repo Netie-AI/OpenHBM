@@ -24,11 +24,18 @@ class StageContext:
     repo_root: Path
 
 
-def run(cmd: list[str], *, cwd: Path | None = None, timeout: int = 600) -> tuple[int, str, str]:
+def run(
+    cmd: list[str],
+    *,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+    timeout: int = 600,
+) -> tuple[int, str, str]:
     """Run a command, capture stdout/stderr. Returns (rc, out, err)."""
     res = subprocess.run(
         cmd,
         cwd=cwd,
+        env=env,
         capture_output=True,
         text=True,
         timeout=timeout,
@@ -42,7 +49,15 @@ def have(tool: str) -> bool:
 
 
 def list_rtl(ip_dir: Path) -> list[Path]:
-    return sorted((ip_dir / "rtl").glob("*.sv")) if (ip_dir / "rtl").exists() else []
+    d = ip_dir / "rtl"
+    if not d.exists():
+        return []
+    rtl = sorted(d.glob("*.sv"))
+    # Verilator parses files in CLI order; `*_pkg.sv` must precede importers (lexical
+    # `refresh_mgr.sv` sorts before `refresh_mgr_pkg.sv` without this).
+    pkgs = [p for p in rtl if p.name.endswith("_pkg.sv")]
+    rest = [p for p in rtl if not p.name.endswith("_pkg.sv")]
+    return sorted(pkgs) + sorted(rest)
 
 
 def list_dv(ip_dir: Path) -> list[Path]:

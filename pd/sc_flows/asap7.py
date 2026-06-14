@@ -17,8 +17,10 @@ FLOW_NAME = "asap7"
 def build(top: str) -> int:
     args = FlowArgs(top=top, flow_name=FLOW_NAME)
     try:
+        from siliconcompiler.targets import asap7_demo
+
         chip = make_chip(args)
-        chip.use("siliconcompiler.targets.asap7_demo")
+        chip.use(asap7_demo)
         # ASAP7 is a 7 nm predictive PDK; coordinates in micron, smaller floorplan.
         chip.set("constraint", "outline", [(0, 0), (60, 60)])
         chip.set("constraint", "corearea", [(2, 2), (58, 58)])
@@ -31,11 +33,12 @@ def build(top: str) -> int:
     except ImportError:
         write_summary_stub(args, status="skipped: siliconcompiler not installed")
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         write_summary_stub(args, status=f"failed: {exc}")
         return 1
 
 
 if __name__ == "__main__":
     import sys
+
     raise SystemExit(build(sys.argv[1] if len(sys.argv) > 1 else "addr_map"))

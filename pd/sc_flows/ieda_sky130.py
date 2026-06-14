@@ -21,10 +21,43 @@ import shutil
 import subprocess
 import sys
 
-from .common import FlowArgs, write_summary_stub
+from .common import REPO_ROOT, FlowArgs, write_summary_stub
 
 FLOW_NAME = "ieda_sky130"
 IEDA_IMAGE = "iedaopensource/release:latest"
+
+# Demo script locations vary across iEDA Docker image revisions.
+_IEDA_SKY130_CANDIDATES = (
+    "/opt/iEDA/scripts/sky130",
+    "/iEDA/scripts/sky130",
+    "/scripts/sky130",
+    "/scripts/design/sky130_gcd",
+)
+
+
+def _ieda_run_script() -> str:
+    """Return a bash snippet that selects a sky130 demo dir or exits 1."""
+    lines = [
+        "set -euo pipefail",
+        'SKY130_DEMO=""',
+    ]
+    for path in _IEDA_SKY130_CANDIDATES:
+        lines.append(
+            f'if [ -z "$SKY130_DEMO" ] && [ -d "{path}" ] && '
+            f'{{ [ -f "{path}/run_iEDA.sh" ] || [ -f "{path}/run_iEDA.py" ]; }}; then'
+        )
+        lines.append(f'  SKY130_DEMO="{path}"')
+        lines.append("fi")
+    lines.extend(
+        [
+            'if [ -z "$SKY130_DEMO" ]; then',
+            '  echo "iEDA sky130 demo scripts not found in image" >&2',
+            "  exit 1",
+            "fi",
+            'cp -r "$SKY130_DEMO" /tmp/sky130_run',
+        ]
+    )
+    return "\n".join(lines) + "\n"
 
 
 def build(top: str) -> int:
@@ -34,32 +67,40 @@ def build(top: str) -> int:
         return 0
 
     try:
-        # Pull the image if missing.
         subprocess.run(["docker", "pull", IEDA_IMAGE], check=True)
 
-        rtl_files_in_repo = [
-            f"hw/ip/{top}/rtl/{p.name}" for p in args.rtl_files
-        ]
+        rtl_files_in_repo = [f"hw/ip/{top}/rtl/{p.name}" for p in args.rtl_files]
+        if not rtl_files_in_repo:
+            write_summary_stub(args, status=f"skipped: no RTL for {top}")
+            return 0
 
-        # Volume-mount the repo and the iEDA sky130 demo data.
-        cmd = [
-            "docker", "run", "--rm",
-            "-v", f"{args.build_dir.parent.parent.parent}:/work",
-            "-w", "/work",
-            IEDA_IMAGE,
-            "bash", "-c",
-            "set -e && "
-            f"export OUTPUT_DIR=build/{top}/{FLOW_NAME}/job0 && "
-            "mkdir -p $OUTPUT_DIR && "
-            # iEDA demo entry point (path inside the image).
-            "cp -r /opt/iEDA/scripts/sky130 /tmp/sky130_run && "
-            f"cp { ' '.join(rtl_files_in_repo) } /tmp/sky130_run/ && "
+        inner = (
+            _ieda_run_script() + f"cp {' '.join(rtl_files_in_repo)} /tmp/sky130_run/ && "
             "cd /tmp/sky130_run && "
-            "bash run_iEDA.sh && "
-            f"cp -r result /work/$OUTPUT_DIR/ || true",
+            "if [ -f run_iEDA.sh ]; then bash run_iEDA.sh; else python3 run_iEDA.py; fi && "
+            f"mkdir -p /work/build/{top}/{FLOW_NAME}/job0 && "
+            f"cp -r result /work/build/{top}/{FLOW_NAME}/job0/"
+        )
+
+        cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{REPO_ROOT}:/work",
+            "-w",
+            "/work",
+            IEDA_IMAGE,
+            "bash",
+            "-c",
+            inner,
         ]
-        rc = subprocess.run(cmd).returncode
-        write_summary_stub(args, status=("ok" if rc == 0 else f"failed: rc={rc}"))
+        proc = subprocess.run(cmd, check=False)
+        rc = proc.returncode
+        if rc == 0:
+            write_summary_stub(args, status="ok")
+        else:
+            write_summary_stub(args, status=f"failed: docker rc={rc}")
         return rc
     except FileNotFoundError as exc:
         write_summary_stub(args, status=f"skipped: {exc}")

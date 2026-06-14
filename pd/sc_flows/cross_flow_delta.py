@@ -36,7 +36,7 @@ def render(table: dict[tuple[str, str], dict], threshold_pct: float) -> tuple[st
         lines.append(f"## `{top}`")
         lines.append("")
         header = "| flow | status | " + " | ".join(METRICS) + " |"
-        sep    = "| --- | --- | " + " | ".join(["---:"] * len(METRICS)) + " |"
+        sep = "| --- | --- | " + " | ".join(["---:"] * len(METRICS)) + " |"
         lines.append(header)
         lines.append(sep)
         rows = []
@@ -66,13 +66,9 @@ def render(table: dict[tuple[str, str], dict], threshold_pct: float) -> tuple[st
                     pct = abs(dv - bv) / abs(bv) * 100.0
                     if pct > 200.0:
                         bad += 1
-                        lines.append(
-                            f"- HARD FAIL: `{f}` vs baseline on {m}: {pct:.1f}% delta"
-                        )
+                        lines.append(f"- HARD FAIL: `{f}` vs baseline on {m}: {pct:.1f}% delta")
                     elif pct > threshold_pct:
-                        lines.append(
-                            f"- WARN: `{f}` vs baseline on {m}: {pct:.1f}% delta"
-                        )
+                        lines.append(f"- WARN: `{f}` vs baseline on {m}: {pct:.1f}% delta")
         lines.append("")
     return "\n".join(lines), bad
 

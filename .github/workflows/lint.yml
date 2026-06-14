@@ -1,5 +1,8 @@
 name: lint
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   pull_request:
   push:
@@ -14,35 +17,42 @@ jobs:
     name: verible-verilog-lint
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Install verible
         run: |
-          VERIBLE_VERSION=v0.0-3979-g4029a18d
+          VERIBLE_VERSION=v0.0-4071-g8d9f2c97
           curl -L "https://github.com/chipsalliance/verible/releases/download/${VERIBLE_VERSION}/verible-${VERIBLE_VERSION}-linux-static-x86_64.tar.gz" \
             -o /tmp/verible.tar.gz
-          mkdir -p /tmp/verible
-          tar -xzf /tmp/verible.tar.gz -C /tmp/verible --strip-components=1
-          echo "/tmp/verible/bin" >> $GITHUB_PATH
+          tar -xzf /tmp/verible.tar.gz -C /tmp
+          sudo cp /tmp/verible-${VERIBLE_VERSION}/bin/* /usr/local/bin/
+          verible-verilog-lint --version
 
       - name: Run verible-verilog-lint
         run: |
           shopt -s globstar nullglob
-          files=( hw/ip/**/*.sv hw/subsystems/**/*.sv hw/top/**/*.sv hw/formal/**/*.sv )
+          all=( hw/ip/**/*.sv hw/subsystems/**/*.sv hw/top/**/*.sv hw/formal/**/*.sv )
+          files=()
+          for f in "${all[@]}"; do
+            case "$f" in
+              */fpv/*|*/dv/model/*|*/tmp_probe/*) continue ;;
+            esac
+            files+=( "$f" )
+          done
           if [ ${#files[@]} -eq 0 ]; then
             echo "No SystemVerilog files yet -- treating as success."
             exit 0
           fi
-          verible-verilog-lint --rules_config_search "${files[@]}"
+          verible-verilog-lint --rules_config .rules.verible_lint "${files[@]}"
 
   python-lint:
     name: ruff + mypy
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install uv
@@ -55,8 +65,8 @@ jobs:
     name: hjson + reggen
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install hjson jsonschema

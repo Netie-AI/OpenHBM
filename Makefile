@@ -7,7 +7,8 @@
 #
 # Run `make help` to see the surface area.
 
-PY              ?= python3
+# Prefer repo venv Python (has rich, cocotb, etc.); never use system pip on PATH.
+PY              ?= $(firstword $(wildcard .venv/bin/python3) $(wildcard .venv/bin/python) python3)
 UV              ?= uv
 VERILATOR       ?= verilator
 YOSYS           ?= yosys

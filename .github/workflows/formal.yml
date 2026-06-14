@@ -1,5 +1,8 @@
 name: formal
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   pull_request:
     paths:
@@ -22,13 +25,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ip: [addr_map, ecc, refresh_mgr]
+        ip: [addr_map, ecc, refresh_mgr, hbm4_ctrl]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Cache OSS CAD Suite
         id: cache-osscad
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /opt/oss-cad-suite
           key: oss-cad-suite-2026-04-02-linux-x64
@@ -39,6 +42,14 @@ jobs:
 
       - name: Add OSS CAD Suite to PATH
         run: echo "/opt/oss-cad-suite/bin" >> $GITHUB_PATH
+
+      - name: Install sv2v
+        run: |
+          SV2V_VERSION=v0.0.12
+          curl -L "https://github.com/zachjs/sv2v/releases/download/${SV2V_VERSION}/sv2v-Linux.zip" -o sv2v.zip
+          unzip sv2v.zip -d sv2v-bin
+          sudo mv sv2v-bin/sv2v-Linux/sv2v /usr/local/bin/sv2v
+          sv2v --version
 
       - name: Run SymbiYosys
         run: |
@@ -55,8 +66,9 @@ jobs:
 
       - name: Upload formal traces
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: formal-${{ matrix.ip }}
-          path: hw/ip/${{ matrix.ip }}/fpv/*_check/
+          path: hw/ip/${{ matrix.ip }}/fpv/*/
+          if-no-files-found: warn
           retention-days: 30

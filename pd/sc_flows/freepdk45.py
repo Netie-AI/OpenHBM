@@ -13,8 +13,10 @@ FLOW_NAME = "freepdk45"
 def build(top: str) -> int:
     args = FlowArgs(top=top, flow_name=FLOW_NAME)
     try:
+        from siliconcompiler.targets import freepdk45_demo
+
         chip = make_chip(args)
-        chip.use("siliconcompiler.targets.freepdk45_demo")
+        chip.use(freepdk45_demo)
         chip.set("constraint", "outline", [(0, 0), (120, 120)])
         chip.set("constraint", "corearea", [(8, 8), (112, 112)])
         chip.run()
@@ -24,11 +26,12 @@ def build(top: str) -> int:
     except ImportError:
         write_summary_stub(args, status="skipped: siliconcompiler not installed")
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         write_summary_stub(args, status=f"failed: {exc}")
         return 1
 
 
 if __name__ == "__main__":
     import sys
+
     raise SystemExit(build(sys.argv[1] if len(sys.argv) > 1 else "addr_map"))

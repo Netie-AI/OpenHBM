@@ -19,36 +19,36 @@ from dataclasses import dataclass
 from enum import IntEnum
 
 # Geometry
-CH_W   = 5
-PCH_W  = 1
-BG_W   = 2
-BA_W   = 2
-ROW_W  = 17
-COL_W  = 6
-SA_W   = 64
+CH_W = 5
+PCH_W = 1
+BG_W = 2
+BA_W = 2
+ROW_W = 17
+COL_W = 6
+SA_W = 64
 BASE_W = 40
 POLY_W = 32
 
-NUM_CHANNELS         = 1 << CH_W
-NUM_PSEUDO_CHANNELS  = 1 << PCH_W
-NUM_BANK_GROUPS      = 1 << BG_W
-NUM_BANKS_PER_GROUP  = 1 << BA_W
-NUM_ROWS             = 1 << ROW_W
-NUM_COLS             = 1 << COL_W
+NUM_CHANNELS = 1 << CH_W
+NUM_PSEUDO_CHANNELS = 1 << PCH_W
+NUM_BANK_GROUPS = 1 << BG_W
+NUM_BANKS_PER_GROUP = 1 << BA_W
+NUM_ROWS = 1 << ROW_W
+NUM_COLS = 1 << COL_W
 
 
 class Mode(IntEnum):
-    CH_STRIPED       = 0
+    CH_STRIPED = 0
     BANK_INTERLEAVED = 1
-    ROW_STATIONARY   = 2
-    RESERVED         = 3
+    ROW_STATIONARY = 2
+    RESERVED = 3
 
 
 @dataclass
 class Region:
     valid: bool
-    base_sa: int          # upper 40 bits of base
-    size_log2: int        # in bytes
+    base_sa: int  # upper 40 bits of base
+    size_log2: int  # in bytes
     mode: Mode
     xor_poly: int
 
@@ -103,31 +103,31 @@ def map_addr(sa: int, region: Region, default_mode: Mode) -> PA:
 
     if mode == Mode.CH_STRIPED:
         pch = _slice(offs, 5, PCH_W)
-        ch  = _slice(offs, 6, CH_W)
-        bg  = _slice(offs, 6 + CH_W, BG_W)
-        ba  = _slice(offs, 6 + CH_W + BG_W, BA_W)
+        ch = _slice(offs, 6, CH_W)
+        bg = _slice(offs, 6 + CH_W, BG_W)
+        ba = _slice(offs, 6 + CH_W + BG_W, BA_W)
         col = _slice(offs, 6 + CH_W + BG_W + BA_W, COL_W)
         row = _slice(offs, 6 + CH_W + BG_W + BA_W + COL_W, ROW_W) ^ xor_for_row
     elif mode == Mode.BANK_INTERLEAVED:
         pch = _slice(offs, 5, PCH_W)
-        bg  = _slice(offs, 6, BG_W)
-        ba  = _slice(offs, 6 + BG_W, BA_W)
-        ch  = _slice(offs, 6 + BG_W + BA_W, CH_W)
+        bg = _slice(offs, 6, BG_W)
+        ba = _slice(offs, 6 + BG_W, BA_W)
+        ch = _slice(offs, 6 + BG_W + BA_W, CH_W)
         col = _slice(offs, 6 + BG_W + BA_W + CH_W, COL_W)
         row = _slice(offs, 6 + BG_W + BA_W + CH_W + COL_W, ROW_W) ^ xor_for_row
     elif mode == Mode.ROW_STATIONARY:
         col = _slice(offs, 5, COL_W)
-        bg  = _slice(offs, 5 + COL_W, BG_W)
-        ba  = _slice(offs, 5 + COL_W + BG_W, BA_W)
+        bg = _slice(offs, 5 + COL_W, BG_W)
+        ba = _slice(offs, 5 + COL_W + BG_W, BA_W)
         pch = _slice(offs, 6 + COL_W + BG_W + BA_W, PCH_W)
-        ch  = _slice(offs, 7 + COL_W + BG_W + BA_W, CH_W)
+        ch = _slice(offs, 7 + COL_W + BG_W + BA_W, CH_W)
         row = _slice(offs, 7 + COL_W + BG_W + BA_W + CH_W, ROW_W) ^ xor_for_row
     else:
         # Reserved -- pass-through, no XOR.
         pch = _slice(offs, 5, PCH_W)
-        ch  = _slice(offs, 6, CH_W)
-        bg  = _slice(offs, 6 + CH_W, BG_W)
-        ba  = _slice(offs, 6 + CH_W + BG_W, BA_W)
+        ch = _slice(offs, 6, CH_W)
+        bg = _slice(offs, 6 + CH_W, BG_W)
+        ba = _slice(offs, 6 + CH_W + BG_W, BA_W)
         col = _slice(offs, 6 + CH_W + BG_W + BA_W, COL_W)
         row = _slice(offs, 6 + CH_W + BG_W + BA_W + COL_W, ROW_W)
 

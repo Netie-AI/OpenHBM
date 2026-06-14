@@ -32,16 +32,16 @@ from dataclasses import dataclass
 
 @dataclass
 class StackParams:
-    tsv_pitch_um:     float = 55.0
-    ubump_pitch_um:   float = 35.0
+    tsv_pitch_um: float = 55.0
+    ubump_pitch_um: float = 35.0
     bridge_length_um: float = 1000.0
-    bridge_width_um:  float = 50.0
+    bridge_width_um: float = 50.0
     metal_thickness_um: float = 0.8
     dielectric_height_um: float = 6.0
     dielectric_eps_r: float = 3.6
     dielectric_loss_tan: float = 0.005
-    data_rate_gbps:   float = 8.0
-    lanes:            int   = 2048
+    data_rate_gbps: float = 8.0
+    lanes: int = 2048
 
     @property
     def nyquist_ghz(self) -> float:
@@ -61,20 +61,23 @@ def build_structure(p: StackParams):
 
     # Organic substrate
     sub = csx.AddMaterial("organic")
-    sub.SetMaterialProperty(epsilon=p.dielectric_eps_r,
-                            kappa=p.dielectric_loss_tan)
-    sub.AddBox(start=[0, 0, 0],
-               stop=[p.bridge_length_um, p.bridge_width_um * p.lanes,
-                     p.dielectric_height_um])
+    sub.SetMaterialProperty(epsilon=p.dielectric_eps_r, kappa=p.dielectric_loss_tan)
+    sub.AddBox(
+        start=[0, 0, 0],
+        stop=[p.bridge_length_um, p.bridge_width_um * p.lanes, p.dielectric_height_um],
+    )
 
     # Bridge metal traces (one per lane, simplified as parallel strips)
     metal = csx.AddMetal("cu")
-    for lane in range(min(p.lanes, 64)):           # cap to keep mesh tractable
+    for lane in range(min(p.lanes, 64)):  # cap to keep mesh tractable
         y0 = lane * p.ubump_pitch_um
         metal.AddBox(
             start=[0, y0, p.dielectric_height_um],
-            stop=[p.bridge_length_um, y0 + p.metal_thickness_um,
-                  p.dielectric_height_um + p.metal_thickness_um],
+            stop=[
+                p.bridge_length_um,
+                y0 + p.metal_thickness_um,
+                p.dielectric_height_um + p.metal_thickness_um,
+            ],
         )
 
     # uBumps (modelled as small cylinders, one per lane)

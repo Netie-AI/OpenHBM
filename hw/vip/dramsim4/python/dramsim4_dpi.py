@@ -64,22 +64,16 @@ class DramSim4:
     def cmd_rd(self, ch: int, pch: int, bg: int, ba: int, col: int) -> None:
         b = self.banks.setdefault((ch, pch, bg, ba), BankState())
         if b.open_row is None:
-            raise RuntimeError(
-                f"RD without open row at ch={ch} pch={pch} bg={bg} ba={ba}"
-            )
+            raise RuntimeError(f"RD without open row at ch={ch} pch={pch} bg={bg} ba={ba}")
         # Schedule data after CL cycles.
         deadline = self.cycle + self.cl
-        self.pending_reads.append(
-            (deadline, (ch, pch, bg, ba, col), b.open_row)
-        )
+        self.pending_reads.append((deadline, (ch, pch, bg, ba, col), b.open_row))
         b.last_rd_cycle = self.cycle
 
     def cmd_wr(self, ch: int, pch: int, bg: int, ba: int, col: int) -> None:
         b = self.banks.setdefault((ch, pch, bg, ba), BankState())
         if b.open_row is None:
-            raise RuntimeError(
-                f"WR without open row at ch={ch} pch={pch} bg={bg} ba={ba}"
-            )
+            raise RuntimeError(f"WR without open row at ch={ch} pch={pch} bg={bg} ba={ba}")
         b.last_wr_cycle = self.cycle
 
     def poll_read(self, ch: int, pch: int) -> tuple[int, int, int, int, int] | None:
@@ -87,5 +81,5 @@ class DramSim4:
         for i, (deadline, key, row) in enumerate(self.pending_reads):
             if key[0] == ch and key[1] == pch and self.cycle >= deadline:
                 self.pending_reads.pop(i)
-                return key + (row,)
+                return (*key, row)
         return None

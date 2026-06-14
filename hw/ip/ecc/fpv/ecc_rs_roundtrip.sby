@@ -1,0 +1,20 @@
+[options]
+mode bmc
+depth 5
+timeout 120
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+exec -- sh -c "sv2v -DOPENHBM_FPV -I . ecc_pkg.sv ecc_encode.sv ecc_wrapper.sv > ecc_rs_roundtrip_flat.v"
+verilog_defines -D OPENHBM_FPV
+read_verilog ecc_rs_roundtrip_flat.v
+prep -top ecc_wrapper
+
+[files]
+ecc_pkg.sv hw/ip/ecc/rtl/ecc_pkg.sv
+gf_tables.inc.sv hw/ip/ecc/rtl/gf_tables.inc.sv
+ecc_encode.sv hw/ip/ecc/rtl/ecc_encode.sv
+ecc_wrapper.sv hw/ip/ecc/fpv/ecc_wrapper.sv

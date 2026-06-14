@@ -304,3 +304,41 @@ will not merge.
 - **CDC**: Clock-Domain Crossing.
 - **MBIST**: Memory Built-In Self-Test (March-C+, etc.).
 - **PIM**: Processing-In-Memory.
+
+---
+
+## Agent Operating Rules
+
+**Section 1 — Git operations:**
+
+You must never run any git command that modifies repository state: no `git add`, `git commit`, `git push`, `git checkout -b`, `git merge`, `git stash`, `git tag`, or equivalent. When you produce file changes, output them in this exact format only:
+
+1. The repo-relative file path
+2. The complete new file contents (or a unified diff)
+3. The exact `git add <path>` command the user should run
+
+The user runs all git operations themselves. Violation of this rule will cause your output to be discarded.
+
+**Section 2 — OSS CAD Suite environment:**
+
+The toolchain is already installed at `~/oss-cad-suite`. Never run any install script, `apt install`, `pip install`, `curl | bash`, or any package manager command to install EDA tools. If a tool is not found, the fix is always to source the environment correctly, not to reinstall. The correct activation for any shell command in WSL is:
+
+```bash
+source ~/oss-cad-suite/environment && \
+  PATH=~/OpenHBM/.venv/bin:~/oss-cad-suite/bin:/usr/bin:/bin:$PATH \
+  <your command here>
+```
+
+For Makefile targets, rely on the existing `unexport PYTHONHOME` / `unexport PYTHONPATH` guards plus `source ~/oss-cad-suite/environment` at the top of any recipe that calls sby, verilator, or yosys. Never override these guards.
+
+cat >> CLAUDE.md << 'EOF'
+
+## Formal verification (SBY/Yosys) rules
+- Yosys cannot parse `import pkg::*;` in module headers.
+- ALL `.sby` targets MUST use a `sv2v`-flattened file as input.
+- The pattern is: sv2v pkg.sv top.sv wrapper.sv > flat.v, then SBY reads flat.v only.
+- Never add `import` statements inside fpv/ wrapper files.
+- The flat.v file is generated, never hand-edited. Add it to .gitignore.
+EOF
+
+echo "hw/ip/*/fpv/*_flat.v" >> .gitignore

@@ -62,3 +62,27 @@ generation rule, and the assertion-first workflow.
 - All technical decisions go through `docs/rfcs/` (RFC-style ADRs).
 - Bug reports and design discussion go through GitHub issues.
 - Hot patches still need DCO sign-off.
+
+## Agent Operating Rules
+
+**Section 1 — Git operations:**
+
+You must never run any git command that modifies repository state: no `git add`, `git commit`, `git push`, `git checkout -b`, `git merge`, `git stash`, `git tag`, or equivalent. When you produce file changes, output them in this exact format only:
+
+1. The repo-relative file path
+2. The complete new file contents (or a unified diff)
+3. The exact `git add <path>` command the user should run
+
+The user runs all git operations themselves. Violation of this rule will cause your output to be discarded.
+
+**Section 2 — OSS CAD Suite environment:**
+
+The toolchain is already installed at `~/oss-cad-suite`. Never run any install script, `apt install`, `pip install`, `curl | bash`, or any package manager command to install EDA tools. If a tool is not found, the fix is always to source the environment correctly, not to reinstall. The correct activation for any shell command in WSL is:
+
+```bash
+source ~/oss-cad-suite/environment && \
+  PATH=~/OpenHBM/.venv/bin:~/oss-cad-suite/bin:/usr/bin:/bin:$PATH \
+  <your command here>
+```
+
+For Makefile targets, rely on the existing `unexport PYTHONHOME` / `unexport PYTHONPATH` guards plus `source ~/oss-cad-suite/environment` at the top of any recipe that calls sby, verilator, or yosys. Never override these guards.

@@ -1,204 +1,274 @@
 // Copyright 2026 The Netie Open HBM Authors
 // SPDX-License-Identifier: Apache-2.0
+//
+// Top: NUM_CHANNELS pseudo-channels, each an independent AXI4 + 16-bank cluster.
 `default_nettype none
 `timescale 1ns/1ps
 
-// hbm4_ctrl -- top-level HBM4 controller (PHASE-1 SKELETON).
-//
-// 32 channels x 2 pseudo-channels per channel x 16 banks per pseudo-channel.
-// Front-end: per-channel AXI4 + per-controller APB CSR. Back-end: per-channel
-// DFI 5.x to hbm4_phy_shim.
-//
-// This Phase-1 skeleton instantiates a single bank machine per (channel,
-// pseudo-channel, bank) for elaboration purposes; the inner FSM stub
-// emits NOPs except for the smoke pattern. Full implementation (the
-// real scheduler / refresh weave / data path) lands in Phase 2 once
-// DRAMsim4 is co-running and addr_map / ecc / refresh_mgr are formally
-// proved.
-//
-// Cycle-by-cycle behaviour, scheduler happy path:
-//   c0: AXI request lands; addr_map_inst maps SA -> PA in 1 cycle.
-//   c1: Scheduler chooses a bank machine (round-robin within channel).
-//   c2: Bank machine emits ACT (or RD/WR if row already open).
-//   c2+tRCD..tRCD+CL: Read data appears on the DFI read bus.
-//   c2+CL+1..end of burst: Data flows back to the AXI port.
-
-import hbm4_ctrl_pkg::*;
-import addr_map_pkg::*;
-
 module hbm4_ctrl #(
-  parameter int unsigned NumCh         = NUM_CHANNELS,
-  parameter int unsigned NumPCh        = NUM_PSEUDO_CHANNELS,
-  parameter int unsigned NumBanks      = NUM_BANK_GROUPS * NUM_BANKS_PER_GROUP,
-  parameter speed_e      DefaultSpeed  = SPEED_8000
-)(
-  input  logic         clk_i,
-  input  logic         rst_ni,
+    parameter int unsigned NUM_CHANNELS  = 1,
+    parameter int unsigned AXI_ID_W      = hbm4_ctrl_pkg::AXI_ID_W,
+    parameter int unsigned AXI_ADDR_W    = hbm4_ctrl_pkg::AXI_ADDR_W,
+    parameter int unsigned AXI_DATA_W    = hbm4_ctrl_pkg::AXI_DATA_W,
+    parameter int unsigned BANK_GROUPS   = hbm4_ctrl_pkg::BANK_GROUPS,
+    parameter int unsigned BANKS_PER_BG  = hbm4_ctrl_pkg::BANKS_PER_BG,
+    parameter int unsigned ROW_W         = hbm4_ctrl_pkg::ROW_W,
+    parameter int unsigned COL_W           = hbm4_ctrl_pkg::COL_W,
+    parameter int unsigned T_RCD           = hbm4_ctrl_pkg::T_RCD,
+    parameter int unsigned T_RAS           = hbm4_ctrl_pkg::T_RAS,
+    parameter int unsigned T_RP            = hbm4_ctrl_pkg::T_RP,
+    parameter int unsigned T_RC            = hbm4_ctrl_pkg::T_RC
+) (
+    input logic clk_i,
+    input logic rst_ni,
 
-  // System-side AXI4 (one per channel) -- bundled struct, defined later.
-  // For Phase 1 we expose just request valid/ready + sa to keep the
-  // interface compilable until the real AXI types arrive from
-  // hw/vendor/pulp_common_cells/.
-  input  logic [NumCh-1:0]                 axi_aw_valid_i,
-  output logic [NumCh-1:0]                 axi_aw_ready_o,
-  input  logic [NumCh-1:0][addr_map_pkg::SaW-1:0] axi_aw_addr_i,
-  input  logic [NumCh-1:0]                 axi_ar_valid_i,
-  output logic [NumCh-1:0]                 axi_ar_ready_o,
-  input  logic [NumCh-1:0][addr_map_pkg::SaW-1:0] axi_ar_addr_i,
+    input  logic [AXI_ID_W-1:0]     awid_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [AXI_ADDR_W-1:0]   awaddr_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [7:0]              awlen_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [2:0]              awsize_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [1:0]              awburst_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [3:0]              awqos_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic                    awvalid_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                    awready_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
 
-  // PHY-side DFI (one per channel, packed into a struct in Phase 2).
-  output cmd_e        [NumCh-1:0][NumPCh-1:0] dfi_cmd_o,
-  output logic        [NumCh-1:0][NumPCh-1:0] dfi_cmd_valid_o,
-  output logic [16:0] [NumCh-1:0][NumPCh-1:0] dfi_row_o,
-  output logic [5:0]  [NumCh-1:0][NumPCh-1:0] dfi_col_o,
+    input  logic [AXI_DATA_W-1:0]    wdata_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [AXI_DATA_W/8-1:0] wstrb_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic                    wlast_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic                    wvalid_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                    wready_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
 
-  // APB CSR
-  input  logic         apb_psel_i,
-  input  logic         apb_penable_i,
-  input  logic         apb_pwrite_i,
-  input  logic [11:0]  apb_paddr_i,
-  input  logic [31:0]  apb_pwdata_i,
-  output logic [31:0]  apb_prdata_o,
-  output logic         apb_pready_o,
-  output logic         apb_pslverr_o
+    output logic [AXI_ID_W-1:0] bid_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [1:0]          bresp_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                bvalid_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic                bready_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    input  logic [AXI_ID_W-1:0]   arid_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [AXI_ADDR_W-1:0] araddr_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [7:0]            arlen_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [2:0]            arsize_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [1:0]            arburst_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [3:0]            arqos_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic                  arvalid_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                  arready_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    output logic [AXI_ID_W-1:0]   rid_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [AXI_DATA_W-1:0] rdata_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [1:0]            rresp_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                  rlast_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                  rvalid_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic                  rready_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    output logic                  cmd_valid_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::cmd_e  cmd_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::bank_addr_t cmd_bank_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [ROW_W-1:0]     cmd_row_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [COL_W-1:0]     cmd_col_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                  drfm_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic                  drfm_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::bank_state_e fpv_bank0_state_o,
+    output logic [15:0]                fpv_bank0_ras_cnt_o,
+
+    output logic [hbm4_ctrl_dfi_pkg::DFI_ADDR_W-1:0] dfi_address_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_ras_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_cas_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_we_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [hbm4_ctrl_dfi_pkg::DFI_BG_W-1:0] dfi_bank_group_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [hbm4_ctrl_dfi_pkg::DFI_BANK_W-1:0] dfi_bank_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_cs_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_cke_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_reset_n_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [hbm4_ctrl_dfi_pkg::DFI_DATA_W-1:0] dfi_wrdata_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [hbm4_ctrl_dfi_pkg::DFI_DATA_W/8-1:0] dfi_wrdata_mask_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_wrdata_en_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_wrdata_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [hbm4_ctrl_dfi_pkg::DFI_DATA_W-1:0] dfi_rddata_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_rddata_valid_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_rddata_en_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_ctrlupd_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_ctrlupd_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_phyupd_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_phyupd_ack_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_lp_ctrl_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [3:0] dfi_lp_ctrl_wakeup_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_lp_ctrl_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_lp_data_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_lp_data_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    input  logic pwrdn_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic sref_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic exit_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::chan_pw_state_e pw_state_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    input  logic [7:0] temp_celsius_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [15:0] trefi_cycles_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    input  logic wrlvl_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic rdlvl_req_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_wrlvl_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic dfi_rdlvl_ack_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_wrlvl_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic dfi_rdlvl_req_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic training_done_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic training_err_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::train_state_e train_state_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                        qos_starvation_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    output hbm4_ctrl_pkg::pmu_state_e   pmu_state_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic                        throttle_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [10:0]                 pmu_activity_cnt_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+
+    input  logic        ecc_ce_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        ecc_ue_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [3:0]  ecc_err_bank_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic [15:0] ecc_err_addr_i [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        inject_ce_i    [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        inject_ue_i    [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic        ce_intr_o      [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic        ue_intr_o      [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        ce_clr_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        ue_clr_i       [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [15:0] ce_count_o     [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [15:0] ue_count_o     [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic        ras_log_valid_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output hbm4_ctrl_pkg::ras_err_type_e ras_log_type_o [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [3:0]  ras_log_bank_o  [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    output logic [15:0] ras_log_addr_o  [0:NUM_CHANNELS-1],  // verilog_lint: waive unpacked-dimensions-range-ordering
+    input  logic        ras_log_pop_i   [0:NUM_CHANNELS-1]  // verilog_lint: waive unpacked-dimensions-range-ordering
 );
 
-  // ---------------------------------------------------------------------------
-  // Address mapper (one instance, time-multiplexed across channels in Phase 1)
-  // ---------------------------------------------------------------------------
-  logic    [addr_map_pkg::SaW-1:0] map_sa;
-  pa_t                              map_pa;
-  logic                             map_req_v;
-  logic                             map_req_r;
-  logic                             map_rsp_v;
-  op_e                              map_rsp_op;
-  logic                             map_rsp_hit;
+  import hbm4_ctrl_pkg::*;
 
-  // Trivial round-robin pull from per-channel AXI AR queues. (Phase-1 stub.)
-  logic [$clog2(NumCh)-1:0] rr_q;
-  always_ff @(posedge clk_i or negedge rst_ni) begin : p_rr
-    if (!rst_ni) rr_q <= '0;
-    else         rr_q <= rr_q + ($clog2(NumCh))'(1);
-  end
+  bank_state_e fpv_bank_state [0:NUM_CHANNELS-1];  // verilog_lint: waive unpacked-dimensions-range-ordering
+  logic [15:0] fpv_bank_ras [0:NUM_CHANNELS-1];  // verilog_lint: waive unpacked-dimensions-range-ordering
 
-  always_comb begin : c_pull
-    map_req_v = axi_ar_valid_i[rr_q];
-    map_sa    = axi_ar_addr_i[rr_q];
-    for (int unsigned c = 0; c < NumCh; c++) begin
-      axi_ar_ready_o[c] = (c == int'(rr_q)) && map_req_r;
-      axi_aw_ready_o[c] = '0;
+  genvar ch;
+  generate
+    for (ch = 0; ch < NUM_CHANNELS; ch++) begin : g_channel
+      hbm4_ctrl_chan_top #(
+          .CHAN_ID      (ch),
+          .AXI_ID_W     (AXI_ID_W),
+          .AXI_ADDR_W   (AXI_ADDR_W),
+          .AXI_DATA_W   (AXI_DATA_W),
+          .BANK_GROUPS  (BANK_GROUPS),
+          .BANKS_PER_BG (BANKS_PER_BG),
+          .ROW_W        (ROW_W),
+          .COL_W        (COL_W),
+          .T_RCD        (T_RCD),
+          .T_RAS        (T_RAS),
+          .T_RP         (T_RP),
+          .T_RC         (T_RC)
+      ) u_chan (
+          .clk_i              (clk_i),
+          .rst_ni             (rst_ni),
+          .awid_i             (awid_i[ch]),
+          .awaddr_i           (awaddr_i[ch]),
+          .awlen_i            (awlen_i[ch]),
+          .awsize_i           (awsize_i[ch]),
+          .awburst_i          (awburst_i[ch]),
+          .awqos_i            (awqos_i[ch]),
+          .awvalid_i          (awvalid_i[ch]),
+          .awready_o          (awready_o[ch]),
+          .wdata_i            (wdata_i[ch]),
+          .wstrb_i            (wstrb_i[ch]),
+          .wlast_i            (wlast_i[ch]),
+          .wvalid_i           (wvalid_i[ch]),
+          .wready_o           (wready_o[ch]),
+          .bid_o              (bid_o[ch]),
+          .bresp_o            (bresp_o[ch]),
+          .bvalid_o           (bvalid_o[ch]),
+          .bready_i           (bready_i[ch]),
+          .arid_i             (arid_i[ch]),
+          .araddr_i           (araddr_i[ch]),
+          .arlen_i            (arlen_i[ch]),
+          .arsize_i           (arsize_i[ch]),
+          .arburst_i          (arburst_i[ch]),
+          .arqos_i            (arqos_i[ch]),
+          .arvalid_i          (arvalid_i[ch]),
+          .arready_o          (arready_o[ch]),
+          .rid_o              (rid_o[ch]),
+          .rdata_o            (rdata_o[ch]),
+          .rresp_o            (rresp_o[ch]),
+          .rlast_o            (rlast_o[ch]),
+          .rvalid_o           (rvalid_o[ch]),
+          .rready_i           (rready_i[ch]),
+          .cmd_valid_o        (cmd_valid_o[ch]),
+          .cmd_o              (cmd_o[ch]),
+          .cmd_bank_o         (cmd_bank_o[ch]),
+          .cmd_row_o          (cmd_row_o[ch]),
+          .cmd_col_o          (cmd_col_o[ch]),
+          .drfm_req_o           (drfm_req_o[ch]),
+          .drfm_ack_i           (drfm_ack_i[ch]),
+          .fpv_bank0_state_o    (fpv_bank_state[ch]),
+          .fpv_bank0_ras_cnt_o  (fpv_bank_ras[ch]),
+          .dfi_address_o        (dfi_address_o[ch]),
+          .dfi_ras_n_o          (dfi_ras_n_o[ch]),
+          .dfi_cas_n_o          (dfi_cas_n_o[ch]),
+          .dfi_we_n_o           (dfi_we_n_o[ch]),
+          .dfi_bank_group_o     (dfi_bank_group_o[ch]),
+          .dfi_bank_o           (dfi_bank_o[ch]),
+          .dfi_cs_n_o           (dfi_cs_n_o[ch]),
+          .dfi_cke_o            (dfi_cke_o[ch]),
+          .dfi_reset_n_o        (dfi_reset_n_o[ch]),
+          .dfi_wrdata_o         (dfi_wrdata_o[ch]),
+          .dfi_wrdata_mask_o    (dfi_wrdata_mask_o[ch]),
+          .dfi_wrdata_en_o      (dfi_wrdata_en_o[ch]),
+          .dfi_wrdata_ack_i     (dfi_wrdata_ack_i[ch]),
+          .dfi_rddata_i         (dfi_rddata_i[ch]),
+          .dfi_rddata_valid_i   (dfi_rddata_valid_i[ch]),
+          .dfi_rddata_en_o      (dfi_rddata_en_o[ch]),
+          .dfi_ctrlupd_req_o    (dfi_ctrlupd_req_o[ch]),
+          .dfi_ctrlupd_ack_i    (dfi_ctrlupd_ack_i[ch]),
+          .dfi_phyupd_req_i     (dfi_phyupd_req_i[ch]),
+          .dfi_phyupd_ack_o     (dfi_phyupd_ack_o[ch]),
+          .dfi_lp_ctrl_req_o    (dfi_lp_ctrl_req_o[ch]),
+          .dfi_lp_ctrl_wakeup_o (dfi_lp_ctrl_wakeup_o[ch]),
+          .dfi_lp_ctrl_ack_i    (dfi_lp_ctrl_ack_i[ch]),
+          .dfi_lp_data_req_o    (dfi_lp_data_req_o[ch]),
+          .dfi_lp_data_ack_i    (dfi_lp_data_ack_i[ch]),
+          .pwrdn_req_i          (pwrdn_req_i[ch]),
+          .sref_req_i           (sref_req_i[ch]),
+          .exit_req_i           (exit_req_i[ch]),
+          .pw_state_o           (pw_state_o[ch]),
+          .temp_celsius_i       (temp_celsius_i[ch]),
+          .trefi_cycles_o       (trefi_cycles_o[ch]),
+          .temp_band_o          (),
+          .wrlvl_req_i          (wrlvl_req_i[ch]),
+          .rdlvl_req_i          (rdlvl_req_i[ch]),
+          .dfi_wrlvl_ack_i      (dfi_wrlvl_ack_i[ch]),
+          .dfi_rdlvl_ack_i      (dfi_rdlvl_ack_i[ch]),
+          .dfi_wrlvl_req_o      (dfi_wrlvl_req_o[ch]),
+          .dfi_rdlvl_req_o      (dfi_rdlvl_req_o[ch]),
+          .training_done_o      (training_done_o[ch]),
+          .training_err_o       (training_err_o[ch]),
+          .train_state_o        (train_state_o[ch]),
+          .qos_starvation_o     (qos_starvation_o[ch]),
+          .pmu_state_o          (pmu_state_o[ch]),
+          .throttle_o           (throttle_o[ch]),
+          .pmu_activity_cnt_o   (pmu_activity_cnt_o[ch]),
+          .ecc_ce_i             (ecc_ce_i[ch]),
+          .ecc_ue_i             (ecc_ue_i[ch]),
+          .ecc_err_bank_i       (ecc_err_bank_i[ch]),
+          .ecc_err_addr_i       (ecc_err_addr_i[ch]),
+          .inject_ce_i          (inject_ce_i[ch]),
+          .inject_ue_i          (inject_ue_i[ch]),
+          .ce_intr_o            (ce_intr_o[ch]),
+          .ue_intr_o            (ue_intr_o[ch]),
+          .ce_clr_i             (ce_clr_i[ch]),
+          .ue_clr_i             (ue_clr_i[ch]),
+          .ce_count_o           (ce_count_o[ch]),
+          .ue_count_o           (ue_count_o[ch]),
+          .ras_log_valid_o      (ras_log_valid_o[ch]),
+          .ras_log_type_o       (ras_log_type_o[ch]),
+          .ras_log_bank_o       (ras_log_bank_o[ch]),
+          .ras_log_addr_o       (ras_log_addr_o[ch]),
+          .ras_log_pop_i        (ras_log_pop_i[ch])
+      );
     end
-  end
+  endgenerate
 
-  addr_map u_addr_map (
-    .clk_i,
-    .rst_ni,
-    .req_valid_i      (map_req_v),
-    .req_ready_o      (map_req_r),
-    .req_sa_i         (map_sa),
-    .req_op_i         (OP_READ),
-    .rsp_valid_o      (map_rsp_v),
-    .rsp_ready_i      (1'b1),
-    .rsp_pa_o         (map_pa),
-    .rsp_op_o         (map_rsp_op),
-    .rsp_region_hit_o (map_rsp_hit),
-    .cfg_we_i         (1'b0),
-    .cfg_idx_i        ('0),
-    .cfg_wdata_i      ('0),
-    .cfg_commit_i     (1'b0),
-    .cfg_default_mode_i (MODE_CH_STRIPED)
-  );
-
-  // ---------------------------------------------------------------------------
-  // Bank machine grid (NumCh x NumPCh x NumBanks). Phase-1 skeleton only
-  // wires the (0,0,*) slot through; the rest are tied off.
-  // ---------------------------------------------------------------------------
-  cmd_e        bm_cmd        [NumBanks];
-  logic        bm_cmd_valid  [NumBanks];
-  logic [16:0] bm_cmd_row    [NumBanks];
-  logic [5:0]  bm_cmd_col    [NumBanks];
-
-  // Phase-1: a static timing struct populated by the CSR block.
-  timing_t timing_q;
-  always_ff @(posedge clk_i or negedge rst_ni) begin : p_timing
-    if (!rst_ni) begin
-      timing_q.tRCD     <= 8'd14;
-      timing_q.tRP      <= 8'd14;
-      timing_q.tRAS     <= 8'd28;
-      timing_q.tRC      <= 8'd42;
-      timing_q.tRFC_ab  <= 12'd200;
-      timing_q.tRFC_pb  <= 12'd80;
-      timing_q.tRFC_sb  <= 12'd120;
-      timing_q.tREFI    <= 16'd1950;
-      timing_q.tFAW     <= 8'd25;
-      timing_q.tRRD_S   <= 5'd4;
-      timing_q.tRRD_L   <= 5'd6;
-      timing_q.tCCD_S   <= 5'd8;
-      timing_q.tCCD_L   <= 5'd16;
-      timing_q.tWR      <= 8'd16;
-      timing_q.tWTR_S   <= 5'd4;
-      timing_q.tWTR_L   <= 5'd6;
-      timing_q.CL       <= 6'd24;
-      timing_q.CWL      <= 6'd20;
-    end
-  end
-
-  for (genvar b = 0; b < NumBanks; b++) begin : g_bank
-    hbm4_bank_machine u_bm (
-      .clk_i,
-      .rst_ni,
-      .timing_i        (timing_q),
-      .req_valid_i     (b == 0 ? map_rsp_v : 1'b0),
-      .req_ready_o     (),
-      .req_row_i       (map_pa.row),
-      .req_col_i       (map_pa.col),
-      .req_is_write_i  (1'b0),
-      .refresh_req_i   (1'b0),
-      .refresh_mode_i  (REF_AB),
-      .refresh_ack_o   (),
-      .cmd_o           (bm_cmd[b]),
-      .cmd_valid_o     (bm_cmd_valid[b]),
-      .cmd_row_o       (bm_cmd_row[b]),
-      .cmd_col_o       (bm_cmd_col[b]),
-      .state_o         ()
-    );
-  end
-
-  // ---------------------------------------------------------------------------
-  // DFI fan-out -- Phase-1 stub: drive (0,0,*) onto channel 0 / pCh 0,
-  // tie all others to NOP.
-  // ---------------------------------------------------------------------------
-  always_comb begin : c_dfi_fanout
-    for (int unsigned c = 0; c < NumCh; c++) begin
-      for (int unsigned p = 0; p < NumPCh; p++) begin
-        dfi_cmd_o      [c][p] = CMD_NOP;
-        dfi_cmd_valid_o[c][p] = 1'b0;
-        dfi_row_o      [c][p] = '0;
-        dfi_col_o      [c][p] = '0;
-      end
-    end
-    // Single live slot (Phase-1 wiring placeholder).
-    dfi_cmd_o      [0][0] = bm_cmd[0];
-    dfi_cmd_valid_o[0][0] = bm_cmd_valid[0];
-    dfi_row_o      [0][0] = bm_cmd_row[0];
-    dfi_col_o      [0][0] = bm_cmd_col[0];
-  end
-
-  // APB CSR placeholder. Reggen-generated decoder lands in Phase 2.
-  assign apb_pready_o   = 1'b1;
-  assign apb_pslverr_o  = 1'b0;
-  assign apb_prdata_o   = '0;
-
-  // ---------------------------------------------------------------------------
-  // SVA (Phase-1 placeholders -- the real timing-parameter assertions land
-  // with the real timer logic).
-  // ---------------------------------------------------------------------------
-`ifndef SYNTHESIS
-  // No two ACT commands on the same pseudo-channel in the same cycle.
-  a_dfi_cmd_one_per_pch : assert property (
-    @(posedge clk_i) disable iff (!rst_ni)
-    $countones({ dfi_cmd_valid_o[0][0] }) <= 1
-  );
-`endif
+  assign fpv_bank0_state_o   = fpv_bank_state[0];
+  assign fpv_bank0_ras_cnt_o = fpv_bank_ras[0];
 
 endmodule : hbm4_ctrl
+
+`default_nettype wire

@@ -1,5 +1,8 @@
 name: asic
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   workflow_dispatch:
     inputs:
@@ -42,15 +45,18 @@ jobs:
         top:
           - addr_map
           - ecc
+          - hbm4_ctrl
         exclude:
           - flow: ieda_sky130
             top: ecc          # iEDA second-source: focus on addr_map for now
+          - flow: ieda_sky130
+            top: hbm4_ctrl    # hbm4_ctrl too large for iEDA demo flow
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Cache OSS CAD Suite
         id: cache-osscad
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /opt/oss-cad-suite
           key: oss-cad-suite-2026-04-02-linux-x64
@@ -62,7 +68,7 @@ jobs:
       - name: Add OSS CAD Suite to PATH
         run: echo "/opt/oss-cad-suite/bin" >> $GITHUB_PATH
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install uv
@@ -77,7 +83,7 @@ jobs:
 
       - name: Upload PPA report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pd-${{ matrix.flow }}-${{ matrix.top }}
           path: |
@@ -93,11 +99,11 @@ jobs:
     runs-on: ubuntu-24.04
     if: always()
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts/
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install uv && uv sync

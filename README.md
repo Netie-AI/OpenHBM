@@ -9,7 +9,11 @@ compatibility certification.
 
 ## Status
 
-**Phase 0 (months 0-3)** -- founder ramp and public commitment. Repository skeleton,
+**OpenHBM v0.2.0 (2026-05-26)** — `hbm4_ctrl` complete: 50 cocotb tests, 14 RTL
+sources, SymbiYosys BMC formal, agent-eval **100/100**. See
+[CHANGELOG.md](CHANGELOG.md) and [docs/releases/v0.2.0.md](docs/releases/v0.2.0.md).
+
+**Phase 0 (months 0-3)** — founder ramp and public commitment. Repository skeleton,
 toolchain pinning, and Track-A/B/C bootstrap landing. See [Plan.md](Plan.md) for the
 36-month strategic plan and
 [`.cursor/plans/openhbm4_automation_and_pipeline_bootstrap_*.plan.md`](.cursor/plans/)
@@ -63,11 +67,16 @@ netie-open-hbm/
   sw/                        # tvm_backend, drivers, firmware, benchmarks
   sim/                       # cocotb runners, traces (vLLM, FlashAttn-3, SGLang)
   tools/agent_eval/          # AI-agent RTL evaluation harness
+  arxiv_package/             # frozen v0.2 snapshot for paper submission (not canonical RTL)
   util/                      # vendor.py, reggen, testplanner, dvsim
   ci/                        # reusable workflow fragments
   scripts/                   # operational scripts
   third_party/               # external sources not vendored as dependencies
 ```
+
+**Canonical RTL** lives under `hw/ip/`. The `arxiv_package/` tree is a frozen
+snapshot for the v0.2 preprint — do not edit it for product development; sync
+from `hw/ip/` when preparing a new paper drop.
 
 ## Pinned toolchain
 

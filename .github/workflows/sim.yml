@@ -1,5 +1,8 @@
 name: sim
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   pull_request:
   push:
@@ -17,13 +20,26 @@ jobs:
       fail-fast: false
       matrix:
         simulator: [verilator, icarus]
-        ip: [addr_map, ecc, refresh_mgr]
+        ip: [addr_map, ecc, refresh_mgr, hbm4_ctrl]
+        exclude:
+          # iverilog cannot elaborate addr_map's unpacked struct-array lookup table.
+          - simulator: icarus
+            ip: addr_map
+          # iverilog cannot elaborate ecc's unpacked-array GF tables.
+          - simulator: icarus
+            ip: ecc
+          # iverilog cannot elaborate refresh_mgr's unpacked-array subroutine ports.
+          - simulator: icarus
+            ip: refresh_mgr
+          # iverilog cannot elaborate hbm4_ctrl's supported SystemVerilog assertions/inside expressions.
+          - simulator: icarus
+            ip: hbm4_ctrl
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Cache OSS CAD Suite
         id: cache-osscad
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /opt/oss-cad-suite
           key: oss-cad-suite-2026-04-02-linux-x64
@@ -35,7 +51,7 @@ jobs:
       - name: Add OSS CAD Suite to PATH
         run: echo "/opt/oss-cad-suite/bin" >> $GITHUB_PATH
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install uv
@@ -53,7 +69,7 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cocotb-${{ matrix.simulator }}-${{ matrix.ip }}
           path: |

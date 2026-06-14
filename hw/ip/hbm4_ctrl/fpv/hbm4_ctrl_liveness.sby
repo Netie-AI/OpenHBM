@@ -1,0 +1,31 @@
+[options]
+mode bmc
+depth 24
+timeout 300
+multiclock off
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+exec -- sh -c "sv2v -DOPENHBM_FPV hbm4_ctrl_dfi_pkg.sv hbm4_ctrl_pkg.sv hbm4_ctrl_axi4_pkg.sv hbm4_ctrl_axi4_slave.sv hbm4_ctrl_bank_fsm.sv hbm4_ctrl_scheduler.sv hbm4_ctrl_dfi_bridge.sv hbm4_ctrl_pwrdn.sv hbm4_ctrl_trefi_ctrl.sv hbm4_ctrl_training.sv hbm4_ctrl_ras.sv hbm4_ctrl_pmu.sv hbm4_ctrl_chan_top.sv hbm4_ctrl.sv hbm4_ctrl_abs.sv hbm4_ctrl_wrapper.sv > hbm4_ctrl_flat.v"
+read_verilog -sv hbm4_ctrl_flat.v
+prep -top hbm4_ctrl_fpv_wrapper
+
+[files]
+hbm4_ctrl_dfi_pkg.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_dfi_pkg.sv
+hbm4_ctrl_axi4_pkg.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_axi4_pkg.sv
+hbm4_ctrl_pkg.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_pkg.sv
+hbm4_ctrl_axi4_slave.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_axi4_slave.sv
+hbm4_ctrl_bank_fsm.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_bank_fsm.sv
+hbm4_ctrl_scheduler.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_scheduler.sv
+hbm4_ctrl_dfi_bridge.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_dfi_bridge.sv
+hbm4_ctrl_pwrdn.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_pwrdn.sv
+hbm4_ctrl_trefi_ctrl.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_trefi_ctrl.sv
+hbm4_ctrl_training.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_training.sv
+hbm4_ctrl_ras.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_ras.sv
+hbm4_ctrl_pmu.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_pmu.sv
+hbm4_ctrl_chan_top.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl_chan_top.sv
+hbm4_ctrl.sv hw/ip/hbm4_ctrl/rtl/hbm4_ctrl.sv
+hbm4_ctrl_abs.sv hw/ip/hbm4_ctrl/fpv/hbm4_ctrl_abs.sv
+hbm4_ctrl_wrapper.sv hw/ip/hbm4_ctrl/fpv/hbm4_ctrl_wrapper.sv

@@ -35,8 +35,7 @@ from .stages.sim import stage_func_cov, stage_sim
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def evaluate_ip(ip_name: str, *, run_mutation: bool = True,
-                run_formal: bool = True) -> IpScoring:
+def evaluate_ip(ip_name: str, *, run_mutation: bool = True, run_formal: bool = True) -> IpScoring:
     ip_dir = REPO_ROOT / "hw" / "ip" / ip_name
     if not ip_dir.exists():
         raise FileNotFoundError(f"hw/ip/{ip_name} not found")
@@ -73,12 +72,9 @@ def main() -> None:
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--prompt", type=Path, help="Path to a prompt under docs/agent-prompts/")
     g.add_argument("--ip", type=str, help="IP name to evaluate directly")
-    g.add_argument("--corpus", type=Path,
-                   help="Run the full corpus regression in this directory")
-    ap.add_argument("--report", type=Path, default=None,
-                    help="Write JSON report here")
-    ap.add_argument("--gate", type=float, default=80.0,
-                    help="Minimum score to pass (default 80)")
+    g.add_argument("--corpus", type=Path, help="Run the full corpus regression in this directory")
+    ap.add_argument("--report", type=Path, default=None, help="Write JSON report here")
+    ap.add_argument("--gate", type=float, default=80.0, help="Minimum score to pass (default 80)")
     ap.add_argument("--no-formal", action="store_true")
     ap.add_argument("--no-mutation", action="store_true")
     args = ap.parse_args()

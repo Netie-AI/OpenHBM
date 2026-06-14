@@ -1,0 +1,14 @@
+// Copyright 2026 The Netie Open HBM Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// hbm4_ctrl.hjson -- IP metadata (no CSRs in v0.1).
+{
+  name: "hbm4_ctrl",
+  human_name: "HBM4 per-channel bank FSM and scheduler",
+  one_line_desc: "Bank FSM + round-robin scheduler stub (v0.1).",
+  bus_interfaces: [],
+  reset_request_list: [],
+  alert_list: [],
+  param_list: [],
+  registers: []
+}

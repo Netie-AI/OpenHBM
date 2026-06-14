@@ -71,7 +71,7 @@ class Manifest:
     license: str = "see-upstream"
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Manifest":
+    def from_dict(cls, d: dict) -> Manifest:
         upstream = d["upstream"]
         return cls(
             name=d["name"],
@@ -189,12 +189,17 @@ def verify(manifests: list[Manifest]) -> int:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Vendor external sources into hw/vendor/")
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--refresh", nargs="?", const="__all__", metavar="NAME",
-                   help="Refresh all (no arg) or one named library")
-    g.add_argument("--verify", action="store_true",
-                   help="Verify vendored sources match their lockfiles")
-    g.add_argument("--list", action="store_true",
-                   help="List configured libraries")
+    g.add_argument(
+        "--refresh",
+        nargs="?",
+        const="__all__",
+        metavar="NAME",
+        help="Refresh all (no arg) or one named library",
+    )
+    g.add_argument(
+        "--verify", action="store_true", help="Verify vendored sources match their lockfiles"
+    )
+    g.add_argument("--list", action="store_true", help="List configured libraries")
     args = ap.parse_args()
 
     if args.list:
