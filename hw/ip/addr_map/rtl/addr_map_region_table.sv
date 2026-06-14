@@ -75,10 +75,16 @@ module addr_map_region_table
   end
 
 `ifndef SYNTHESIS
-  // CSR atomicity: a write to shadow does NOT propagate to live without commit.
+  // Verilator cannot evaluate $stable on an unpacked struct array, so flatten.
+  logic [NumRegions*$bits(region_t)-1:0] live_flat;
+  always_comb begin : c_live_flat
+    for (int unsigned i = 0; i < NumRegions; i++) begin
+      live_flat[i*$bits(region_t) +: $bits(region_t)] = live_q[i];
+    end
+  end
   a_no_partial_propagate : assert property (
     @(posedge clk_i) disable iff (!rst_ni)
-    cfg_we_i && !cfg_commit_i |=> $stable(live_q)
+    cfg_we_i && !cfg_commit_i |=> $stable(live_flat)
   );
 `endif
 

@@ -7,8 +7,9 @@ multiclock off
 smtbmc bitwuzla
 
 [script]
-read_verilog -sv addr_map_pkg.sv
-read_verilog -sv addr_map_xor.sv
+exec -- sh -c "sv2v -DOPENHBM_FPV addr_map_pkg.sv addr_map_xor.sv > addr_map_inj_flat.v"
+verilog_defines -D OPENHBM_FPV
+read_verilog addr_map_inj_flat.v
 prep -top addr_map_xor
 
 [files]
