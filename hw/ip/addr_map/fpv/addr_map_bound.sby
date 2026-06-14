@@ -2,21 +2,22 @@
 mode bmc
 depth 4
 multiclock off
+outdir hw/ip/addr_map/fpv/addr_map_bound
 
 [engines]
 smtbmc bitwuzla
 
 [script]
-read_verilog -sv ../rtl/addr_map_pkg.sv
-read_verilog -sv ../rtl/addr_map_xor.sv
-read_verilog -sv ../rtl/addr_map_region_table.sv
-read_verilog -sv ../rtl/addr_map_reg_top.sv
-read_verilog -sv ../rtl/addr_map.sv
+read_verilog -sv addr_map_pkg.sv
+read_verilog -sv addr_map_xor.sv
+read_verilog -sv addr_map_region_table.sv
+read_verilog -sv addr_map_reg_top.sv
+read_verilog -sv addr_map.sv
 prep -top addr_map
 
 [files]
-../rtl/addr_map_pkg.sv
-../rtl/addr_map_xor.sv
-../rtl/addr_map_region_table.sv
-../rtl/addr_map_reg_top.sv
-../rtl/addr_map.sv
+addr_map_pkg.sv hw/ip/addr_map/rtl/addr_map_pkg.sv
+addr_map_xor.sv hw/ip/addr_map/rtl/addr_map_xor.sv
+addr_map_region_table.sv hw/ip/addr_map/rtl/addr_map_region_table.sv
+addr_map_reg_top.sv hw/ip/addr_map/rtl/addr_map_reg_top.sv
+addr_map.sv hw/ip/addr_map/rtl/addr_map.sv
