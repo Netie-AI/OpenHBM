@@ -18,7 +18,7 @@ ifeq ($(SIM),verilator)
 EXTRA_ARGS += -GPracThresh=$(PRAC_THRESH)
 endif
 ifeq ($(SIM),icarus)
-COMPILE_ARGS += -gno-assertions
+COMPILE_ARGS += -DSYNTHESIS -gno-assertions
 EXTRA_ARGS += -Prefresh_mgr.PracThresh=$(PRAC_THRESH)
 endif
 

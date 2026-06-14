@@ -65,11 +65,11 @@ module addr_map_xor
       end
       MODE_ROW_STATIONARY: begin
         pa_o.col = offs[ColW+4:5];
-        pa_o.bg  = offs[ColW+5+BgW:ColW+5];
-        pa_o.ba  = offs[ColW+5+BgW+BaW:ColW+6+BgW];
+        pa_o.bg  = offs[ColW+4+BgW:ColW+5];
+        pa_o.ba  = offs[ColW+4+BgW+BaW:ColW+5+BgW];
         pa_o.pch = offs[ColW+6+BgW+BaW];
         pa_o.ch  = offs[ColW+6+BgW+BaW+ChW:ColW+7+BgW+BaW];
-        pa_o.row = offs[ColW+7+BgW+BaW+ChW+RowW:ColW+8+BgW+BaW+ChW]
+        pa_o.row = offs[ColW+6+BgW+BaW+ChW+RowW:ColW+7+BgW+BaW+ChW]
                    ^ xor_for_row[RowW-1:0];
       end
       default: begin

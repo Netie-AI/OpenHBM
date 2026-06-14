@@ -43,7 +43,7 @@ EXTRA_ARGS += -GNUM_CHANNELS=$(NUM_CHANNELS) \
   -GT_RCD=4 -GT_RAS=10 -GT_RP=4 -GT_RC=14
 endif
 ifeq ($(SIM),icarus)
-COMPILE_ARGS += -gno-assertions
+COMPILE_ARGS += -DSYNTHESIS -gno-assertions
 EXTRA_ARGS += -Phbm4_ctrl.NUM_CHANNELS=$(NUM_CHANNELS) \
   -Phbm4_ctrl.BANK_GROUPS=4 -Phbm4_ctrl.BANKS_PER_BG=4 -Phbm4_ctrl.ROW_W=15 \
   -Phbm4_ctrl.COL_W=6 -Phbm4_ctrl.T_RCD=4 -Phbm4_ctrl.T_RAS=10 \

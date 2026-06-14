@@ -12,9 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-StageId = Literal[
-    "lint", "elab", "sim_pass", "func_cov", "formal", "mutation"
-]
+StageId = Literal["lint", "elab", "sim_pass", "func_cov", "formal", "mutation"]
 
 
 @dataclass(frozen=True)
@@ -45,8 +43,9 @@ class IpScoring:
     stages: list[StageResult] = field(default_factory=list)
     threshold: float = 80.0
 
-    def add(self, stage: StageId, score_unit: float, detail: str = "",
-            hard_fail: bool = False) -> None:
+    def add(
+        self, stage: StageId, score_unit: float, detail: str = "", hard_fail: bool = False
+    ) -> None:
         score_unit = max(0.0, min(1.0, score_unit))
         self.stages.append(StageResult(stage, score_unit, detail, hard_fail))
 
@@ -93,15 +92,9 @@ class IpScoring:
 
 # Per-IP override hook -- mirrors the table in docs/agent-prompts/<ip>.md.
 PER_IP_WEIGHTS: dict[str, Weights] = {
-    "addr_map": Weights(
-        lint=10, elab=10, sim_pass=20, func_cov=20, formal=25, mutation=15
-    ),
-    "ecc": Weights(
-        lint=10, elab=10, sim_pass=20, func_cov=15, formal=30, mutation=15
-    ),
-    "refresh_mgr": Weights(
-        lint=10, elab=10, sim_pass=20, func_cov=20, formal=25, mutation=15
-    ),
+    "addr_map": Weights(lint=10, elab=10, sim_pass=20, func_cov=20, formal=25, mutation=15),
+    "ecc": Weights(lint=10, elab=10, sim_pass=20, func_cov=15, formal=30, mutation=15),
+    "refresh_mgr": Weights(lint=10, elab=10, sim_pass=20, func_cov=20, formal=25, mutation=15),
 }
 
 

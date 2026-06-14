@@ -25,13 +25,17 @@ def gf_tables():
 def main() -> None:
     exp, log = gf_tables()
     lines: list[str] = []
-    lines.append("  // verilog_lint: waive unpacked-dimensions-range-ordering -- machine-generated ROM")
+    lines.append(
+        "  // verilog_lint: waive unpacked-dimensions-range-ordering -- machine-generated ROM"
+    )
     lines.append("  localparam bit [7:0] GfExp [0:511] = '{")
     for i in range(512):
         sep = "," if i < 511 else ""
         lines.append(f"    8'h{exp[i]:02x}{sep}")
     lines.append("  };")
-    lines.append("  // verilog_lint: waive unpacked-dimensions-range-ordering -- machine-generated ROM")
+    lines.append(
+        "  // verilog_lint: waive unpacked-dimensions-range-ordering -- machine-generated ROM"
+    )
     lines.append("  localparam bit [7:0] GfLog [0:255] = '{")
     for i in range(256):
         sep = "," if i < 255 else ""

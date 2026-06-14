@@ -42,7 +42,9 @@ class Hbm4CtrlRef:
             return
         if any(c == Cmd.ACT for c, _, _ in self.seen_cmds):
             acts = [i for i, (c, _, _) in enumerate(self.seen_cmds) if c == Cmd.ACT]
-            first_rw = next(i for i, (c, _, _) in enumerate(self.seen_cmds) if c in (Cmd.RD, Cmd.WR))
+            first_rw = next(
+                i for i, (c, _, _) in enumerate(self.seen_cmds) if c in (Cmd.RD, Cmd.WR)
+            )
             assert acts[0] < first_rw, "RD/WR before ACT"
             return
         # ACT may be absorbed same-cycle with the scheduler accept handshake (v0.1 visibility).

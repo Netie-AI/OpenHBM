@@ -73,11 +73,7 @@ def stage_sim(ctx: StageContext, simulator: str = "verilator") -> StageResult:
         timeout=3600,
     )
     passed, total = _parse_results(results)
-    n_case = (
-        len(list(ET.parse(results).getroot().iter("testcase")))
-        if results.exists()
-        else 0
-    )
+    n_case = len(list(ET.parse(results).getroot().iter("testcase"))) if results.exists() else 0
     if total == 0:
         # Fallback: cocotb regression table uses "** <module>.<test> ... PASS|FAIL".
         blob = out + err
@@ -120,5 +116,5 @@ def stage_func_cov(ctx: StageContext) -> StageResult:
         return StageResult("func_cov", 0.0, "no coverpoints declared")
     fraction = hit_pts / total_pts
     return StageResult(
-        "func_cov", fraction, f"{hit_pts}/{total_pts} bins hit ({fraction*100:.1f}%)"
+        "func_cov", fraction, f"{hit_pts}/{total_pts} bins hit ({fraction * 100:.1f}%)"
     )

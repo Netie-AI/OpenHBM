@@ -22,9 +22,18 @@ jobs:
         simulator: [verilator, icarus]
         ip: [addr_map, ecc, refresh_mgr, hbm4_ctrl]
         exclude:
+          # iverilog cannot elaborate addr_map's unpacked struct-array lookup table.
+          - simulator: icarus
+            ip: addr_map
           # iverilog cannot elaborate ecc's unpacked-array GF tables.
           - simulator: icarus
             ip: ecc
+          # iverilog cannot elaborate refresh_mgr's unpacked-array subroutine ports.
+          - simulator: icarus
+            ip: refresh_mgr
+          # iverilog cannot elaborate hbm4_ctrl's supported SystemVerilog assertions/inside expressions.
+          - simulator: icarus
+            ip: hbm4_ctrl
     steps:
       - uses: actions/checkout@v6
 
