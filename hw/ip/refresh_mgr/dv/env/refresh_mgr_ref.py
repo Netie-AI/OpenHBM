@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import List, Tuple
 
 
 @dataclass
@@ -27,8 +26,8 @@ class RefreshMgrRef:
     ba_w: int = 2
     count_w: int = 16
 
-    entry: List[List[PracEntry]] = field(default_factory=list)
-    credits: List[int] = field(default_factory=list)
+    entry: list[list[PracEntry]] = field(default_factory=list)
+    credits: list[int] = field(default_factory=list)
     pending: bool = False
     lat_bg: int = 0
     lat_ba: int = 0
@@ -43,15 +42,13 @@ class RefreshMgrRef:
             self.credits = [self.credit_max] * self.num_banks
 
     def bank_idx(self, bg: int, ba: int) -> int:
-        return ((bg & ((1 << self.bg_w) - 1)) << self.ba_w) | (
-            ba & ((1 << self.ba_w) - 1)
-        )
+        return ((bg & ((1 << self.bg_w) - 1)) << self.ba_w) | (ba & ((1 << self.ba_w) - 1))
 
     def _sat_inc(self, c: int) -> int:
         m = (1 << self.count_w) - 1
         return m if c >= m else c + 1
 
-    def tbl_decay(self, tbl: List[PracEntry]) -> None:
+    def tbl_decay(self, tbl: list[PracEntry]) -> None:
         for e in tbl:
             if e.valid and e.count != 0:
                 e.count -= 1
@@ -59,7 +56,7 @@ class RefreshMgrRef:
                     e.valid = False
                     e.row = 0
 
-    def mg_activate(self, tbl: List[PracEntry], r: int) -> None:
+    def mg_activate(self, tbl: list[PracEntry], r: int) -> None:
         mask_r = (1 << self.row_w) - 1
         r &= mask_r
 
@@ -98,7 +95,7 @@ class RefreshMgrRef:
             tbl[free_ix].row = r
             tbl[free_ix].count = 1
 
-    def scan_hit(self, mem: List[List[PracEntry]]) -> Tuple[bool, int, int, int]:
+    def scan_hit(self, mem: list[list[PracEntry]]) -> tuple[bool, int, int, int]:
         """Return (hit, bg, ba, bank_index). Same scan order as scan_hit_mem in RTL."""
         for bb in range(self.num_banks):
             for slot in mem[bb]:
@@ -108,7 +105,7 @@ class RefreshMgrRef:
                     return True, bg, ba, bb
         return False, 0, 0, 0
 
-    def scan_hit_detail(self, mem: List[List[PracEntry]]) -> Tuple[bool, int, int, int, int]:
+    def scan_hit_detail(self, mem: list[list[PracEntry]]) -> tuple[bool, int, int, int, int]:
         for bb in range(self.num_banks):
             for slot in mem[bb]:
                 if slot.valid and slot.count >= self.prac_thresh:
@@ -117,7 +114,7 @@ class RefreshMgrRef:
                     return True, bg, ba, bb, slot.row
         return False, 0, 0, 0, 0
 
-    def remove_row(self, mem_bank: List[PracEntry], rr: int) -> None:
+    def remove_row(self, mem_bank: list[PracEntry], rr: int) -> None:
         mask_r = (1 << self.row_w) - 1
         rr &= mask_r
 
@@ -137,7 +134,7 @@ class RefreshMgrRef:
         act_row: int,
         credit_release: bool,
         drfm_ack: bool,
-    ) -> Tuple[int, int, int, bool, bool]:
+    ) -> tuple[int, int, int, bool, bool]:
         """One clock. Returns (drfm_target_bg, ba, row, drfm_pending, prac_overflow)."""
         hit_pre_vis, _, _, hit_pre_bb = self.scan_hit(self.entry)
         start_pend = self.pending
@@ -148,10 +145,8 @@ class RefreshMgrRef:
         nlat_bg, nlat_ba, nlat_rw = self.lat_bg, self.lat_ba, self.lat_row
 
         if drfm_ack and pend:
-
             bk = self.bank_idx(nlat_bg, nlat_ba)
             if cred[bk] > 0:
-
                 cred[bk] -= 1
             self.remove_row(mem[bk], nlat_rw)
 
@@ -159,24 +154,20 @@ class RefreshMgrRef:
 
         if trefw_tick:
             for bb in range(self.num_banks):
-
                 self.tbl_decay(mem[bb])
                 cred[bb] = self.credit_max
         elif credit_release:
             if start_pend:
                 rb = self.bank_idx(self.lat_bg, self.lat_ba)
             elif hit_pre_vis:
-
                 rb = hit_pre_bb
             else:
                 rb = 0
 
             if cred[rb] < self.credit_max:
-
                 cred[rb] += 1
 
         if (not trefw_tick) and act_valid:
-
             bk = self.bank_idx(act_bg, act_ba)
             self.mg_activate(mem[bk], act_row)
 

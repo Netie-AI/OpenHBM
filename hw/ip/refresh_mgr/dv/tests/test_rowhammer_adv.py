@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import os
 import sys
-
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -20,7 +19,7 @@ from cocotb.triggers import RisingEdge, Timer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "env"))
 
-from refresh_mgr_ref import RefreshMgrRef  # noqa: E402
+from refresh_mgr_ref import RefreshMgrRef
 
 COV: dict[str, dict[str, int]] = {}
 
@@ -142,7 +141,6 @@ async def _run_sixteen_high_hammer(dut) -> None:
         pend = int(dut.drfm_pending_o.value)
         ov = int(dut.prac_overflow_alert_o.value)
 
-
         if pend or ov:
             seen = True
             _touch("adv", "defense_trigger")
@@ -155,7 +153,6 @@ async def test_sixteen_high_hammer_pressure(dut) -> None:
     cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
     _touch("adv", "hammer_start")
 
-
     await _run_sixteen_high_hammer(dut)
     _write_coverage()
 
@@ -165,21 +162,16 @@ async def test_trace_rowhammer_replay_if_present(dut) -> None:
     cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
     _touch("adv", "replay_entry")
 
-
     if not TRACE.exists():
-
         cocotb.log.info("%s absent — rerunning synthesized hammer workload", TRACE)
         await _run_sixteen_high_hammer(dut)
         _touch("adv", "trace_missing_fallback")
         _write_coverage()
 
-
         return
 
     m = _model()
     await _reset(dut)
-
-
 
     triples = []
     for raw in TRACE.read_text(encoding="utf-8").splitlines():
@@ -207,7 +199,6 @@ async def test_trace_rowhammer_replay_if_present(dut) -> None:
 
     ck = int(os.environ.get("TRACE_TICK_PERIOD", "31"))
     for i, triple in enumerate(triples):
-
         tg, tb, rr = triple
         tick_pulse = ck > 0 and (i % ck == 0)
         pend = int(dut.drfm_pending_o.value)

@@ -21,6 +21,10 @@ jobs:
       matrix:
         simulator: [verilator, icarus]
         ip: [addr_map, ecc, refresh_mgr, hbm4_ctrl]
+        exclude:
+          # iverilog cannot elaborate ecc's unpacked-array GF tables.
+          - simulator: icarus
+            ip: ecc
     steps:
       - uses: actions/checkout@v6
 

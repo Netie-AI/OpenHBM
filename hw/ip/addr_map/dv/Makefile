@@ -10,4 +10,8 @@ VERILOG_SOURCES = \
   $(PWD)/../rtl/addr_map_reg_top.sv \
   $(PWD)/../rtl/addr_map.sv
 
+ifeq ($(SIM),icarus)
+COMPILE_ARGS += -gno-assertions
+endif
+
 include $(shell cocotb-config --makefiles)/Makefile.sim

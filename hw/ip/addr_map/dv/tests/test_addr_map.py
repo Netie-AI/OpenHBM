@@ -17,12 +17,11 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "env"))
-from addr_map_ref import (  # noqa: E402
+from addr_map_ref import (
+    SA_W,
     Mode,
     Region,
     map_addr,
-    SA_W,
-    BASE_W,
 )
 
 
@@ -107,9 +106,9 @@ async def test_default_mode_passthrough(dut) -> None:
         expect = map_addr(sa, invalid, Mode.CH_STRIPED)
         await issue(dut, sa)
         ch, pch, bg, ba, row, col = await collect_response(dut)
-        assert (ch, pch, bg, ba, row, col) == expect.as_tuple(), \
-            f"sa={sa:#018x}: got=({ch},{pch},{bg},{ba},{row},{col}) " \
-            f"expected={expect.as_tuple()}"
+        assert (ch, pch, bg, ba, row, col) == expect.as_tuple(), (
+            f"sa={sa:#018x}: got=({ch},{pch},{bg},{ba},{row},{col}) expected={expect.as_tuple()}"
+        )
 
 
 @cocotb.test()

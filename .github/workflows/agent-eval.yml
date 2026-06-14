@@ -22,6 +22,9 @@ jobs:
     name: Corpus regression
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v6
 
@@ -74,9 +77,13 @@ jobs:
             for (const m of r.modules) {
               lines.push(`| \`${m.name}\` | ${m.score}/100 | ${m.score >= 80 ? 'PASS' : 'FAIL'} |`);
             }
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: lines.join('\n')
-            });
+            try {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: lines.join('\n')
+              });
+            } catch (error) {
+              core.warning(`Could not post PR comment: ${error.message}`);
+            }

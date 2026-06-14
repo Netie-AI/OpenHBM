@@ -13,8 +13,14 @@ VERILOG_SOURCES = \
   $(PWD)/../rtl/refresh_mgr.sv
 
 COMPILE_ARGS += -Wno-fatal
-# cocotb-tools passes EXTRA_ARGS to the Verilator compile line (VERILATOR_ARGS is ignored).
-EXTRA_ARGS += -Wno-fatal -GPracThresh=$(PRAC_THRESH)
+EXTRA_ARGS += -Wno-fatal
+ifeq ($(SIM),verilator)
+EXTRA_ARGS += -GPracThresh=$(PRAC_THRESH)
+endif
+ifeq ($(SIM),icarus)
+COMPILE_ARGS += -gno-assertions
+EXTRA_ARGS += -Prefresh_mgr.PracThresh=$(PRAC_THRESH)
+endif
 
 # Re-run Verilator when this Makefile changes (PRAC_THRESH / EXTRA_ARGS).
 CUSTOM_COMPILE_DEPS += $(CURDIR)/Makefile

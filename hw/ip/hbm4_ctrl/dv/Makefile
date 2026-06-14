@@ -36,9 +36,19 @@ VERILOG_SOURCES = \
 # Scale to 16 via: make NUM_CHANNELS=16
 NUM_CHANNELS ?= 4
 export NUM_CHANNELS
-EXTRA_ARGS += -Wno-fatal -GNUM_CHANNELS=$(NUM_CHANNELS) \
+EXTRA_ARGS += -Wno-fatal
+ifeq ($(SIM),verilator)
+EXTRA_ARGS += -GNUM_CHANNELS=$(NUM_CHANNELS) \
   -GBANK_GROUPS=4 -GBANKS_PER_BG=4 -GROW_W=15 -GCOL_W=6 \
   -GT_RCD=4 -GT_RAS=10 -GT_RP=4 -GT_RC=14
+endif
+ifeq ($(SIM),icarus)
+COMPILE_ARGS += -gno-assertions
+EXTRA_ARGS += -Phbm4_ctrl.NUM_CHANNELS=$(NUM_CHANNELS) \
+  -Phbm4_ctrl.BANK_GROUPS=4 -Phbm4_ctrl.BANKS_PER_BG=4 -Phbm4_ctrl.ROW_W=15 \
+  -Phbm4_ctrl.COL_W=6 -Phbm4_ctrl.T_RCD=4 -Phbm4_ctrl.T_RAS=10 \
+  -Phbm4_ctrl.T_RP=4 -Phbm4_ctrl.T_RC=14
+endif
 
 CUSTOM_COMPILE_DEPS += $(CURDIR)/Makefile
 

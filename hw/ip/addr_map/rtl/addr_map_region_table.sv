@@ -75,7 +75,7 @@ module addr_map_region_table
   end
 
 `ifndef SYNTHESIS
-  // Verilator cannot evaluate $stable on an unpacked struct array, so flatten.
+  // Flatten live_q: $stable does not support unpacked struct arrays.
   logic [NumRegions*$bits(region_t)-1:0] live_flat;
   always_comb begin : c_live_flat
     for (int unsigned i = 0; i < NumRegions; i++) begin

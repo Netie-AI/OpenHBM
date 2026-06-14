@@ -13,8 +13,8 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "env"))
-from ecc_ref import decode as ref_decode  # noqa: E402
-from ecc_ref import encode as ref_encode  # noqa: E402
+from ecc_ref import decode as ref_decode
+from ecc_ref import encode as ref_encode
 
 COV: dict[str, dict[str, int]] = {}
 
@@ -131,5 +131,3 @@ async def test_ecc_bit_flip(dut) -> None:
     assert int(dut.data_o.value) == int(exp_d)
     _touch("ecc_mode", "ecc_parity_bit")
     _write_coverage()
-
-
