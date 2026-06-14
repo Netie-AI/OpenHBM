@@ -1,5 +1,8 @@
 name: fpga
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   workflow_dispatch:
     inputs:
@@ -31,7 +34,7 @@ jobs:
     runs-on: [self-hosted, hacc, vivado]
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Source Vivado
         run: |
@@ -52,7 +55,7 @@ jobs:
 
       - name: Upload bitstream and reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: fpga-${{ inputs.target || 'alveo_u55c' }}
           path: |

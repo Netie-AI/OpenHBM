@@ -55,7 +55,7 @@ def encode(data128: int) -> int:
 def _syndromes(data128: int, ecc16: int) -> tuple[int, int]:
     d = [(data128 >> (8 * i)) & 0xFF for i in range(16)]
     p0, p1 = ecc16 & 0xFF, (ecc16 >> 8) & 0xFF
-    c = d + [p0, p1]
+    c = [*d, p0, p1]
     s1 = s2 = 0
     for i in range(18):
         s1 ^= gf_mul(c[i], _EXP[i])

@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 import random
+import sys
+from pathlib import Path
 
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
-import sys
-from pathlib import Path
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "env"))
-from fifo_sync_ref import FifoSyncRef  # noqa: E402
+from fifo_sync_ref import FifoSyncRef
 
 WIDTH = 8
 DEPTH = 8
@@ -92,18 +91,16 @@ async def test_random_traffic(dut) -> None:
 
     for _ in range(2000):
         do_push = rng.random() < 0.5 and not ref.full
-        do_pop  = rng.random() < 0.5 and not ref.empty
+        do_pop = rng.random() < 0.5 and not ref.empty
         data = rng.randint(0, 0xFF)
-        dut.push_i.value      = int(do_push)
+        dut.push_i.value = int(do_push)
         dut.push_data_i.value = data
-        dut.pop_i.value       = int(do_pop)
-
-        # Capture expected output BEFORE advancing the model.
-        expected_pop = ref.peek() if do_pop else None
+        dut.pop_i.value = int(do_pop)
 
         await RisingEdge(dut.clk_i)
 
-        if do_push: ref.push(data)
+        if do_push:
+            ref.push(data)
         if do_pop:
             got = int(dut.pop_data_o.value)
             popped = ref.pop()

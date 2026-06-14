@@ -8,8 +8,8 @@ into `iedaopensource/release` driving the iPL-3D demo flow.
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import textwrap
+from pathlib import Path
 
 PLACEHOLDER_DEF = textwrap.dedent(
     """\

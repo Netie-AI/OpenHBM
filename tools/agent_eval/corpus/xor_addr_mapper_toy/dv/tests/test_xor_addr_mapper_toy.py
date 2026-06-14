@@ -36,8 +36,7 @@ async def test_directed(dut) -> None:
     cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
     await reset(dut)
 
-    cases = [(0, 0), (0, 1), (0xDEADBEEF & ((1 << 26) - 1), 0),
-             (0xCAFEBABE & ((1 << 26) - 1), 1)]
+    cases = [(0, 0), (0, 1), (0xDEADBEEF & ((1 << 26) - 1), 0), (0xCAFEBABE & ((1 << 26) - 1), 1)]
     for sa, mode in cases:
         dut.sa_i.value = sa
         dut.mode_i.value = mode

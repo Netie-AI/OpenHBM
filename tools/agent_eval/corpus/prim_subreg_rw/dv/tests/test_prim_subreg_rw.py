@@ -1,4 +1,4 @@
-﻿"""Stub cocotb test for prim_subreg_rw. Replace with real coverage once the RTL lands."""
+"""Stub cocotb test for prim_subreg_rw. Replace with real coverage once the RTL lands."""
 
 from __future__ import annotations
 

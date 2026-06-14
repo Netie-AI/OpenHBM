@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import sys
 
-from .common import FlowArgs, REPO_ROOT, write_summary_stub
+from .common import REPO_ROOT, FlowArgs, write_summary_stub
 
 FLOW_NAME = "ieda_sky130"
 IEDA_IMAGE = "iedaopensource/release:latest"
@@ -48,13 +48,15 @@ def _ieda_run_script() -> str:
         )
         lines.append(f'  SKY130_DEMO="{path}"')
         lines.append("fi")
-    lines.extend([
-        'if [ -z "$SKY130_DEMO" ]; then',
-        '  echo "iEDA sky130 demo scripts not found in image" >&2',
-        "  exit 1",
-        "fi",
-        'cp -r "$SKY130_DEMO" /tmp/sky130_run',
-    ])
+    lines.extend(
+        [
+            'if [ -z "$SKY130_DEMO" ]; then',
+            '  echo "iEDA sky130 demo scripts not found in image" >&2',
+            "  exit 1",
+            "fi",
+            'cp -r "$SKY130_DEMO" /tmp/sky130_run',
+        ]
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -67,16 +69,13 @@ def build(top: str) -> int:
     try:
         subprocess.run(["docker", "pull", IEDA_IMAGE], check=True)
 
-        rtl_files_in_repo = [
-            f"hw/ip/{top}/rtl/{p.name}" for p in args.rtl_files
-        ]
+        rtl_files_in_repo = [f"hw/ip/{top}/rtl/{p.name}" for p in args.rtl_files]
         if not rtl_files_in_repo:
             write_summary_stub(args, status=f"skipped: no RTL for {top}")
             return 0
 
         inner = (
-            _ieda_run_script()
-            + f"cp {' '.join(rtl_files_in_repo)} /tmp/sky130_run/ && "
+            _ieda_run_script() + f"cp {' '.join(rtl_files_in_repo)} /tmp/sky130_run/ && "
             "cd /tmp/sky130_run && "
             "if [ -f run_iEDA.sh ]; then bash run_iEDA.sh; else python3 run_iEDA.py; fi && "
             f"mkdir -p /work/build/{top}/{FLOW_NAME}/job0 && "
@@ -84,11 +83,17 @@ def build(top: str) -> int:
         )
 
         cmd = [
-            "docker", "run", "--rm",
-            "-v", f"{REPO_ROOT}:/work",
-            "-w", "/work",
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{REPO_ROOT}:/work",
+            "-w",
+            "/work",
             IEDA_IMAGE,
-            "bash", "-c", inner,
+            "bash",
+            "-c",
+            inner,
         ]
         proc = subprocess.run(cmd, check=False)
         rc = proc.returncode

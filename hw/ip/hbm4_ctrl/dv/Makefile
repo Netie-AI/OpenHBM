@@ -32,8 +32,9 @@ VERILOG_SOURCES = \
   $(CURDIR)/model/hbm4_phy_model.sv \
   $(CURDIR)/model/hbm4_dram_model.sv
 
-COMPILE_ARGS += --threads 20
-NUM_CHANNELS ?= 1
+# Default 4 channels so P2 multichan tests exercise real RTL (not vacuous skip).
+# Scale to 16 via: make NUM_CHANNELS=16
+NUM_CHANNELS ?= 4
 export NUM_CHANNELS
 EXTRA_ARGS += -Wno-fatal -GNUM_CHANNELS=$(NUM_CHANNELS) \
   -GBANK_GROUPS=4 -GBANKS_PER_BG=4 -GROW_W=15 -GCOL_W=6 \

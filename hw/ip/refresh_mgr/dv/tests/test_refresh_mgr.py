@@ -13,7 +13,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "env"))
-from refresh_mgr_ref import RefreshMgrRef  # noqa: E402
+from refresh_mgr_ref import RefreshMgrRef
 
 try:
     import pyvsc as vsc
@@ -157,7 +157,7 @@ async def test_corner_credit_exhaust_alert(dut) -> None:
     saw_ov = False
     # Keep hammering the same row while draining credits; ack alone removes the
     # PRAC slot so pending never re-arms and credits never exhaust without acts.
-    for cy in range(150):
+    for _cy in range(150):
         p = int(dut.drfm_pending_o.value)
         if int(dut.prac_overflow_alert_o.value):
             saw_ov = True
@@ -267,4 +267,3 @@ async def test_pyvsc_constrained_pkg(dut) -> None:
     for _ in range(32):
         t.randomize()  # type: ignore[attr-defined,no-untyped-call]
         assert int(t.x) < 16
-

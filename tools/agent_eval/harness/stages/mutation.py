@@ -44,14 +44,14 @@ def stage_mutation(ctx: StageContext) -> StageResult:
         return StageResult("mutation", 0.0, "mcy not on PATH")
 
     nproc = os.cpu_count() or 4
-    rc, out, err = run(
+    rc, _out, _err = run(
         ["mcy", "init", "-f"],
         cwd=mcy_dir,
         timeout=600,
     )
     if rc != 0:
         return StageResult("mutation", 0.0, f"mcy init failed: rc={rc}")
-    rc, out, err = run(
+    rc, _out, _err = run(
         ["mcy", "run", "-j", str(nproc)],
         cwd=mcy_dir,
         timeout=7200,
@@ -66,5 +66,5 @@ def stage_mutation(ctx: StageContext) -> StageResult:
     return StageResult(
         "mutation",
         fraction,
-        f"{killed}/{total} mutants killed ({fraction*100:.1f}%)",
+        f"{killed}/{total} mutants killed ({fraction * 100:.1f}%)",
     )

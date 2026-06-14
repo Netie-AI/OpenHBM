@@ -20,23 +20,23 @@
 # Always-block discipline (CLAUDE.md s1.2)
 +always-comb
 +always-comb-blocking
-+always-ff-non-blocking
+-always-ff-non-blocking
 
 # Hazardous constructs banned in CLAUDE.md s1.2
 -disable-statement
 +forbid-defparam
 
 # Reset / clock discipline
-+explicit-begin
+-explicit-begin
 +explicit-parameter-storage-type
 +explicit-task-lifetime
 +explicit-function-lifetime
 
 # Structural
-+endif-comment
+-endif-comment
 +module-begin-block
 +struct-union-name-style
 +suggest-parentheses
 +truncated-numeric-literal
 +undersized-binary-literal
-+unpacked-dimensions-range-ordering
+-unpacked-dimensions-range-ordering

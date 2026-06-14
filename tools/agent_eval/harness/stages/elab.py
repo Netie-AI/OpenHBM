@@ -34,6 +34,9 @@ def stage_elab(ctx: StageContext) -> StageResult:
         cmd.append("-I" + str(sva_lib))
     if prim_dir.exists():
         cmd.append("-I" + str(prim_dir))
+    rtl_inc = ctx.ip_dir / "rtl"
+    if rtl_inc.exists():
+        cmd.append("-I" + str(rtl_inc))
 
     rc, out, err = run(cmd, cwd=ctx.work, timeout=300)
     if rc == 0:
@@ -42,7 +45,7 @@ def stage_elab(ctx: StageContext) -> StageResult:
     err_lines = (err or out).strip().splitlines()
     detail = "\n".join(err_lines[:20])
     # Distinguish: warnings only (rc=0), warnings escalated to errors via -Wall (rc!=0).
-    n_err = sum(1 for l in err_lines if "%Error" in l)
-    n_warn = sum(1 for l in err_lines if "%Warning" in l)
+    n_err = sum(1 for line in err_lines if "%Error" in line)
+    n_warn = sum(1 for line in err_lines if "%Warning" in line)
     score = max(0.0, 1.0 - (n_err * 0.3 + n_warn * 0.05))
     return StageResult("elab", score, f"errors={n_err} warnings={n_warn}\n{detail}")

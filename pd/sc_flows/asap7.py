@@ -33,11 +33,12 @@ def build(top: str) -> int:
     except ImportError:
         write_summary_stub(args, status="skipped: siliconcompiler not installed")
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         write_summary_stub(args, status=f"failed: {exc}")
         return 1
 
 
 if __name__ == "__main__":
     import sys
+
     raise SystemExit(build(sys.argv[1] if len(sys.argv) > 1 else "addr_map"))

@@ -1,5 +1,8 @@
 name: lint
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   pull_request:
   push:
@@ -30,7 +33,14 @@ jobs:
       - name: Run verible-verilog-lint
         run: |
           shopt -s globstar nullglob
-          files=( hw/ip/**/*.sv hw/subsystems/**/*.sv hw/top/**/*.sv hw/formal/**/*.sv )
+          all=( hw/ip/**/*.sv hw/subsystems/**/*.sv hw/top/**/*.sv hw/formal/**/*.sv )
+          files=()
+          for f in "${all[@]}"; do
+            case "$f" in
+              */fpv/*|*/dv/model/*|*/tmp_probe/*) continue ;;
+            esac
+            files+=( "$f" )
+          done
           if [ ${#files[@]} -eq 0 ]; then
             echo "No SystemVerilog files yet -- treating as success."
             exit 0

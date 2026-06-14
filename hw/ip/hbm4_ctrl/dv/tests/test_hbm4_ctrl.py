@@ -14,7 +14,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import ReadOnly, RisingEdge, Timer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "env"))
-from hbm4_ctrl_ref import Cmd, Hbm4CtrlRef  # noqa: E402
+from hbm4_ctrl_ref import Cmd, Hbm4CtrlRef
 
 NUM_CH = int(os.environ.get("NUM_CHANNELS", "1"))
 
@@ -124,7 +124,7 @@ async def _tb_begin(dut, watchdog_cycles: int = 2000) -> None:
     async def timeout_task():
         for _ in range(watchdog_cycles):
             await RisingEdge(dut.clk_i)
-        assert False, "TIMEOUT"
+        raise AssertionError("TIMEOUT")
 
     cocotb.start_soon(timeout_task())
 
@@ -288,7 +288,9 @@ async def test_bank_interleave(dut) -> None:
             await RisingEdge(dut.clk_i)
             await ReadOnly()
             await Timer(1, unit="ps")
-            if int(_port(dut, "cmd_valid_o").value) and int(_port(dut, "cmd_o").value) == int(Cmd.RD):
+            if int(_port(dut, "cmd_valid_o").value) and int(_port(dut, "cmd_o").value) == int(
+                Cmd.RD
+            ):
                 got[int(_port(dut, "cmd_bank_o").value)] = True
 
     watcher = cocotb.start_soon(watch_rd())
@@ -389,7 +391,7 @@ async def test_axi4_wrap_decerr(dut) -> None:
             assert int(_port(dut, "bresp_o").value) == 3
             break
     else:
-        assert False, "bvalid_o never asserted for WRAP DECERR"
+        raise AssertionError("bvalid_o never asserted for WRAP DECERR")
     _port(dut, "wvalid_i").value = 0
     await RisingEdge(dut.clk_i)
     _touch("axi", "wrap_decerr")
@@ -435,7 +437,7 @@ async def test_axi4_backpressure(dut) -> None:
         if int(_port(dut, "bvalid_o").value):
             break
     else:
-        assert False, "bvalid_o never asserted with bready=0"
+        raise AssertionError("bvalid_o never asserted with bready=0")
     await RisingEdge(dut.clk_i)
     await ReadOnly()
     await Timer(1, unit="ps")
@@ -544,7 +546,7 @@ async def test_dfi_act_encoding(dut) -> None:
                     assert int(_dfi(dut, "dfi_we_n_o").value) == 1
                     assert int(_dfi(dut, "dfi_cs_n_o").value) == 0
                     return
-        assert False, "ACT not observed"
+        raise AssertionError("ACT not observed")
 
     mon = cocotb.start_soon(wait_act())
     await _axi_write_single(dut, bank=bank, row=row, col=0)
@@ -575,7 +577,7 @@ async def test_dfi_rd_encoding(dut) -> None:
                     assert int(_dfi(dut, "dfi_we_n_o").value) == 1
                     assert int(_dfi(dut, "dfi_rddata_en_o").value) == 1
                     return
-        assert False, "RD not observed after ACT"
+        raise AssertionError("RD not observed after ACT")
 
     mon = cocotb.start_soon(wait_rd())
     await _axi_read_single(dut, bank=bank, row=row, col=0)
@@ -606,7 +608,7 @@ async def test_dfi_wr_encoding(dut) -> None:
                     assert int(_dfi(dut, "dfi_wrdata_en_o").value) == 1
                     assert int(_dfi(dut, "dfi_wrdata_mask_o").value) == 0
                     return
-        assert False, "WR not observed after ACT"
+        raise AssertionError("WR not observed after ACT")
 
     mon = cocotb.start_soon(wait_wr())
     await _axi_write_single(dut, bank=bank, row=row, col=1)
@@ -667,7 +669,9 @@ async def test_dfi_phyupd_ack(dut) -> None:
     await RisingEdge(dut.clk_i)
     await ReadOnly()
     await Timer(1, unit="ps")
-    assert int(_port(dut, "dfi_phyupd_ack_o").value) == 0, "phyupd_ack must drop within 1 cycle of req deassert"
+    assert int(_port(dut, "dfi_phyupd_ack_o").value) == 0, (
+        "phyupd_ack must drop within 1 cycle of req deassert"
+    )
     _touch("dfi", "phyupd_ack")
     _write_coverage()
 
@@ -978,9 +982,7 @@ async def test_wrlvl_timeout(dut) -> None:
         await RisingEdge(dut.clk_i)
         await Timer(1, unit="ps")
 
-    assert int(_port(dut, "training_err_o", 0).value) == 1, (
-        "Expected training_err_o after timeout"
-    )
+    assert int(_port(dut, "training_err_o", 0).value) == 1, "Expected training_err_o after timeout"
     assert int(_port(dut, "train_state_o", 0).value) == 4, (
         f"Expected TRAIN_ERR(4), got {_port(dut, 'train_state_o', 0).value}"
     )
@@ -1007,9 +1009,7 @@ async def test_err_clears_on_new_req(dut) -> None:
     await RisingEdge(dut.clk_i)
     await Timer(1, unit="ps")
 
-    assert int(_port(dut, "training_err_o", 0).value) == 0, (
-        "Error should clear on new req"
-    )
+    assert int(_port(dut, "training_err_o", 0).value) == 0, "Error should clear on new req"
 
 
 @cocotb.test()
@@ -1263,9 +1263,7 @@ async def test_ras_interrupt_clear(dut) -> None:
     await RisingEdge(dut.clk_i)
     await Timer(1, unit="ps")
 
-    assert int(_port(dut, "ce_intr_o", 0).value) == 0, (
-        "CE interrupt should clear after ce_clr_i"
-    )
+    assert int(_port(dut, "ce_intr_o", 0).value) == 0, "CE interrupt should clear after ce_clr_i"
 
 
 @cocotb.test()
@@ -1294,9 +1292,7 @@ async def test_ras_log_fifo(dut) -> None:
         await RisingEdge(dut.clk_i)
         await Timer(1, unit="ps")
 
-    assert int(_port(dut, "ras_log_valid_o", 0).value) == 0, (
-        "Log should be empty after 3 pops"
-    )
+    assert int(_port(dut, "ras_log_valid_o", 0).value) == 0, "Log should be empty after 3 pops"
 
 
 @cocotb.test()

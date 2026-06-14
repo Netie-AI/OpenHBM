@@ -56,6 +56,7 @@ def make_chip(args: FlowArgs):
 def write_summary_stub(args: FlowArgs, status: str) -> None:
     """Write a minimal summary even when SC isn't installed (CI dry-runs)."""
     import json
+
     summary = {
         "design": args.top,
         "flow": args.flow_name,

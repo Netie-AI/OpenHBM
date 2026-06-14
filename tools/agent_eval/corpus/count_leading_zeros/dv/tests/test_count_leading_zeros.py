@@ -1,4 +1,4 @@
-﻿"""Stub cocotb test for count_leading_zeros. Replace with real coverage once the RTL lands."""
+"""Stub cocotb test for count_leading_zeros. Replace with real coverage once the RTL lands."""
 
 from __future__ import annotations
 
