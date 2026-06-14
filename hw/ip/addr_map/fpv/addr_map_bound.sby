@@ -2,7 +2,6 @@
 mode bmc
 depth 4
 multiclock off
-outdir hw/ip/addr_map/fpv/addr_map_bound
 
 [engines]
 smtbmc bitwuzla

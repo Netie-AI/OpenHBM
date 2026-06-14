@@ -10,8 +10,10 @@ FLOW_NAME = "ihp130"
 def build(top: str) -> int:
     args = FlowArgs(top=top, flow_name=FLOW_NAME)
     try:
+        from siliconcompiler.targets import ihp130_demo
+
         chip = make_chip(args)
-        chip.use("siliconcompiler.targets.ihp130_demo")
+        chip.use(ihp130_demo)
         chip.set("constraint", "outline", [(0, 0), (250, 250)])
         chip.set("constraint", "corearea", [(15, 15), (235, 235)])
         chip.run()

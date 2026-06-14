@@ -19,6 +19,12 @@ verilator/
 *_proof/
 *_bmc/
 *_cover/
+hw/ip/*/fpv/*/
+!hw/ip/*/fpv/*.sby
+!hw/ip/*/fpv/*.sv
+hw/ip/refresh_mgr/fpv/tmp_probe/
+*_flat.v
+**/coverage.xml
 
 # SiliconCompiler
 job*/

@@ -17,8 +17,10 @@ FLOW_NAME = "asap7"
 def build(top: str) -> int:
     args = FlowArgs(top=top, flow_name=FLOW_NAME)
     try:
+        from siliconcompiler.targets import asap7_demo
+
         chip = make_chip(args)
-        chip.use("siliconcompiler.targets.asap7_demo")
+        chip.use(asap7_demo)
         # ASAP7 is a 7 nm predictive PDK; coordinates in micron, smaller floorplan.
         chip.set("constraint", "outline", [(0, 0), (60, 60)])
         chip.set("constraint", "corearea", [(2, 2), (58, 58)])

@@ -1,0 +1,33 @@
+[options]
+size 80
+seed 42
+tags COVERED NOCHANGE
+
+[script]
+read_verilog -sv ../../../rtl/ecc_pkg.sv
+read_verilog -sv ../../../rtl/ecc_encode.sv
+read_verilog -sv ../../../rtl/ecc_decode.sv
+read_verilog -sv ../../../rtl/ecc.sv
+prep -top ecc
+
+[files]
+../../../rtl/ecc_pkg.sv
+../../../rtl/gf_tables.inc.sv
+../../../rtl/ecc_encode.sv
+../../../rtl/ecc_decode.sv
+../../../rtl/ecc.sv
+
+[logic]
+if result("sim") == "FAIL":
+ tag("COVERED")
+else:
+ tag("NOCHANGE")
+
+[report]
+if tags("COVERED") + tags("NOCHANGE"):
+ print("mutation kill-rate proxy: {:.1f}%".format(
+    100.0 * tags("COVERED") / (tags("COVERED") + tags("NOCHANGE"))))
+
+[test sim]
+expect PASS FAIL
+run bash run_test.sh

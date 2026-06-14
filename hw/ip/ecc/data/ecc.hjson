@@ -1,0 +1,14 @@
+// Copyright 2026 The Netie Open HBM Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// ecc.hjson -- IP metadata (no CSRs in v0.1).
+{
+  name: "ecc",
+  human_name: "ChipKill-style symbol ECC",
+  one_line_desc: "RS(18,16) over GF(2^8) for 128-bit data + 16-bit parity (v0.1).",
+  bus_interfaces: [],
+  reset_request_list: [],
+  alert_list: [],
+  param_list: [],
+  registers: []
+}

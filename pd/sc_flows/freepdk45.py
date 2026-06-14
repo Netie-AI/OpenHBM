@@ -13,8 +13,10 @@ FLOW_NAME = "freepdk45"
 def build(top: str) -> int:
     args = FlowArgs(top=top, flow_name=FLOW_NAME)
     try:
+        from siliconcompiler.targets import freepdk45_demo
+
         chip = make_chip(args)
-        chip.use("siliconcompiler.targets.freepdk45_demo")
+        chip.use(freepdk45_demo)
         chip.set("constraint", "outline", [(0, 0), (120, 120)])
         chip.set("constraint", "corearea", [(8, 8), (112, 112)])
         chip.run()

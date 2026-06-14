@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ip: [addr_map, ecc, refresh_mgr]
+        ip: [addr_map, ecc, refresh_mgr, hbm4_ctrl]
     steps:
       - uses: actions/checkout@v6
 

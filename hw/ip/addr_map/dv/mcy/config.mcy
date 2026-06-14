@@ -1,0 +1,28 @@
+[options]
+size 60
+seed 42
+tags COVERED NOCHANGE
+
+[script]
+read_verilog -sv ../../../rtl/addr_map_pkg.sv
+read_verilog -sv ../../../rtl/addr_map_xor.sv
+prep -top addr_map_xor
+
+[files]
+../../../rtl/addr_map_pkg.sv
+../../../rtl/addr_map_xor.sv
+
+[logic]
+if result("sim") == "FAIL":
+ tag("COVERED")
+else:
+ tag("NOCHANGE")
+
+[report]
+if tags("COVERED") + tags("NOCHANGE"):
+ print("mutation kill-rate proxy: {:.1f}%".format(
+    100.0 * tags("COVERED") / (tags("COVERED") + tags("NOCHANGE"))))
+
+[test sim]
+expect PASS FAIL
+run bash run_test.sh

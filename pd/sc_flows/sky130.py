@@ -10,8 +10,10 @@ FLOW_NAME = "sky130"
 def build(top: str) -> int:
     args = FlowArgs(top=top, flow_name=FLOW_NAME)
     try:
+        from siliconcompiler.targets import skywater130_demo
+
         chip = make_chip(args)
-        chip.use("siliconcompiler.targets.skywater130_demo")
+        chip.use(skywater130_demo)
         chip.set("constraint", "outline", [(0, 0), (200, 200)])  # microns; tune per IP
         chip.set("constraint", "corearea", [(10, 10), (190, 190)])
         chip.run()

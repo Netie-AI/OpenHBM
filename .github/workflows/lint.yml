@@ -20,7 +20,7 @@ jobs:
 
       - name: Install verible
         run: |
-          VERIBLE_VERSION=$(curl -s https://api.github.com/repos/chipsalliance/verible/releases/latest | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
+          VERIBLE_VERSION=v0.0-4071-g8d9f2c97
           curl -L "https://github.com/chipsalliance/verible/releases/download/${VERIBLE_VERSION}/verible-${VERIBLE_VERSION}-linux-static-x86_64.tar.gz" \
             -o /tmp/verible.tar.gz
           tar -xzf /tmp/verible.tar.gz -C /tmp
@@ -35,7 +35,7 @@ jobs:
             echo "No SystemVerilog files yet -- treating as success."
             exit 0
           fi
-          verible-verilog-lint --rules_config_search "${files[@]}"
+          verible-verilog-lint --rules_config .rules.verible_lint "${files[@]}"
 
   python-lint:
     name: ruff + mypy

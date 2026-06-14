@@ -1,0 +1,14 @@
+// Copyright 2026 The Netie Open HBM Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// refresh_mgr.hjson -- IP metadata (no CSRs in v0.2).
+{
+  name: "refresh_mgr",
+  human_name: "HBM4 refresh manager (DRFM + PRAC)",
+  one_line_desc: "Per-bank refresh scheduling with DRFM and PRAC rowhammer mitigation.",
+  bus_interfaces: [],
+  reset_request_list: [],
+  alert_list: [],
+  param_list: [],
+  registers: []
+}
