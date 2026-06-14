@@ -20,12 +20,12 @@ jobs:
 
       - name: Install verible
         run: |
-          VERIBLE_VERSION=v0.0-3964-g3d4aa9db
+          VERIBLE_VERSION=$(curl -s https://api.github.com/repos/chipsalliance/verible/releases/latest | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
           curl -L "https://github.com/chipsalliance/verible/releases/download/${VERIBLE_VERSION}/verible-${VERIBLE_VERSION}-linux-static-x86_64.tar.gz" \
             -o /tmp/verible.tar.gz
-          mkdir -p /tmp/verible
-          tar -xzf /tmp/verible.tar.gz -C /tmp/verible --strip-components=1
-          echo "/tmp/verible/bin" >> $GITHUB_PATH
+          tar -xzf /tmp/verible.tar.gz -C /tmp
+          sudo cp /tmp/verible-${VERIBLE_VERSION}/bin/* /usr/local/bin/
+          verible-verilog-lint --version
 
       - name: Run verible-verilog-lint
         run: |
