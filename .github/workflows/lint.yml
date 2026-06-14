@@ -14,13 +14,13 @@ jobs:
     name: verible-verilog-lint
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Install verible
         run: |
-          VERIBLE_VERSION=v0.0-3979-g4029a18d
+          VERIBLE_VERSION=v0.0-3964-g3d4aa9db
           curl -L "https://github.com/chipsalliance/verible/releases/download/${VERIBLE_VERSION}/verible-${VERIBLE_VERSION}-linux-static-x86_64.tar.gz" \
             -o /tmp/verible.tar.gz
           mkdir -p /tmp/verible
@@ -41,8 +41,8 @@ jobs:
     name: ruff + mypy
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install uv
@@ -55,8 +55,8 @@ jobs:
     name: hjson + reggen
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install hjson jsonschema
