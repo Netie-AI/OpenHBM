@@ -45,7 +45,7 @@ jobs:
           SV2V_VERSION=v0.0.12
           curl -L "https://github.com/zachjs/sv2v/releases/download/${SV2V_VERSION}/sv2v-Linux.zip" -o sv2v.zip
           unzip sv2v.zip -d sv2v-bin
-          sudo mv sv2v-bin/sv2v /usr/local/bin/sv2v
+          sudo mv sv2v-bin/sv2v-Linux/sv2v /usr/local/bin/sv2v
           sv2v --version
 
       - name: Run SymbiYosys

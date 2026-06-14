@@ -39,8 +39,7 @@ docs = [
   "sphinx-rtd-theme>=2.0",
   "myst-parser>=4.0",
   "mkdocs>=1.6",
-  "mkdocs-material>=9.5",
-  "asciidoctor>=2.0"
+  "mkdocs-material>=9.5"
 ]
 dev = [
   "ruff>=0.6",
