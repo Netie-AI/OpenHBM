@@ -20,7 +20,7 @@ dependencies = [
   "cocotb-coverage>=1.2.0",
   "cocotb-test>=0.2.6",
   "pyuvm==4.0.1",
-  "pyvsc>=0.10.0",
+  "pyvsc>=0.9.5",
   "edalize>=0.6.1",
   "fusesoc>=2.4",
   "siliconcompiler==0.34.0",
